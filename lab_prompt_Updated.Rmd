@@ -15,6 +15,10 @@ In 1958 Keeling began continuous monitoring of atmospheric carbon dioxide concen
 library(tidyverse)
 library(tsibble)
 library(latex2exp)
+library(feasts)
+library(patchwork)
+library(forecast)
+
 
 theme_set(theme_minimal())
 knitr::opts_chunk$set(dpi=1000)
@@ -83,9 +87,9 @@ hist(co2_tsib$value)
 # inspecting acf and pacf graphs of co2 concentrations over time
 
 co2_acf <- acf(co2_tsib$value, plot = F)
-co2_pacf <- pacf(co2_tsib$value, plot = F)
+co2_pacf <- pacf(co2_tsib$value, plot = T)
 
-co2_acf_plot <- co2_acf %>% autoplot() + 
+co2_acf_plot <-  autoplot(co2_acf) + 
   labs(title = "ACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
 co2_pacf_plot <- co2_pacf %>% autoplot() + 
   labs(title = "PACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
@@ -101,7 +105,7 @@ co2_lag_plot <- gg_lag(co2_tsib, y = value) +
 
 
 
-autoplot(co2_tsib) / (co2_acf_plot | co2_pacf_plot)
+autoplot(co2_tsib, value) / (co2_acf_plot | co2_pacf_plot)
 
 
 # we see high autocorrelation for many lags, and a clear upward trending average 
@@ -111,11 +115,22 @@ autoplot(co2_tsib) / (co2_acf_plot | co2_pacf_plot)
 # the pacf shows a wave pattern, where 
 # this time series is non-statonary as its mean appears to increase over time 
 
+co2_tsib %>% as.tibble() %>% 
+  mutate(year = year(index)) %>% 
+  group_by(year) %>% 
+  mutate(`Yearly Co2` = mean(value)) %>%
+  mutate(residual = value - `Yearly Co2`) %>%
+  pivot_longer(cols = c(value, `Yearly Co2`, residual), names_to = "type", values_to = "Monthly Co2") %>% 
+  mutate(residual_bool = if_else(type == "residual", "Residuals", "Monthly Time Series Plotted on Yearly Average Co2")) %>% 
+  ggplot(aes(x = index, y = `Monthly Co2`, color = type)) +
+  geom_line() +
+  facet_wrap(~residual_bool, scales = "free_y", ncol = 1)
 
 
 # needs:
 
 # look at smothing over the year, and talk about the growth rate
+# make a percent change plot
 # Look at a zoomed in season and show the seasonality
 # Maybe look at residuals if we were to just plot the averages (this could show irregularities)
 # fix the names on the plots
