@@ -65,6 +65,68 @@ Conduct a comprehensive Exploratory Data Analysis on the `co2` series. This shou
 
 What you report in the deliverable should not be your own process of discovery, but rather a guided discussion that you have constructed so that your audience can come to an understanding as succinctly and successfully as possible. This means that figures should be thoughtfully constructed and what you learn from them should be discussed in text; to the extent that there is _any_ raw output from your analysis, you should intend for people to read and interpret it, and you should write your own interpretation as well. 
 
+
+```{r EDA}
+
+#column names
+names(co2_tsib) # index and value, i.e. yearmonth and co2 concentration
+
+#range of dates
+range(co2_tsib$index) # "1959 Jan" - "1997 Dec"
+
+# look at distribution of co2 concentrations
+hist(co2_tsib$value) 
+# time insensitive histogram shows low amounts of the highest and lowest co2 values, 
+# makes sense because the trend is linear so we wouldn't have high counts of the min and max
+
+
+# inspecting acf and pacf graphs of co2 concentrations over time
+
+co2_acf <- acf(co2_tsib$value, plot = F)
+co2_pacf <- pacf(co2_tsib$value, plot = F)
+
+co2_acf_plot <- co2_acf %>% autoplot() + 
+  labs(title = "ACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
+co2_pacf_plot <- co2_pacf %>% autoplot() + 
+  labs(title = "PACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
+
+
+# maybe remove this, this doesn't add much information, just further represents the association trend 
+co2_lag_plot <- gg_lag(co2_tsib, y = value) +
+  geom_point(color = "black", size = .5, alpha = .2) +  
+  labs(title = "Lag Plot of Monthly Co2 Concentrations", x = "Lagged Co2", y = "Co2") +
+  theme(legend.position = 'None',
+        axis.text.x = element_text(angle = 90))
+  
+
+
+
+autoplot(co2_tsib) / (co2_acf_plot | co2_pacf_plot)
+
+
+# we see high autocorrelation for many lags, and a clear upward trending average 
+# the scalloped shape of the acf plot and the oscillation in the time series plot suggest seasonality or the presence of some cycle 
+# considering this is co2, a seasonal trend via actual seasons makes sense and matches with the carbon emission cycles proposed in the above readings (particularly https://en.wikipedia.org/wiki/Keeling_Curve)
+# the pacf shows significant positive autocorrelation at lag 1 and significant negative autocorrelation at lag 2 This fits with the time series because while lage 2 is positive in the acf, when controlling for lag 1, the second lagged month may represent some change in season, which impacts the co2 concentrations.  
+# the pacf shows a wave pattern, where 
+# this time series is non-statonary as its mean appears to increase over time 
+
+
+
+# needs:
+
+# look at smothing over the year, and talk about the growth rate
+# Look at a zoomed in season and show the seasonality
+# Maybe look at residuals if we were to just plot the averages (this could show irregularities)
+# fix the names on the plots
+# write a guided discussion as statements instead of questions, guided by the readings.
+
+
+
+```
+
+
+
 ## (3 points) Task 2a: Linear time trend model
 
 Fit a linear time trend model to the `co2` series, and examine the characteristics of the residuals. Compare this to a quadratic time trend model. Discuss whether a logarithmic transformation of the data would be appropriate. Fit a polynomial time trend model that incorporates seasonal dummy variables, and use this model to generate forecasts to the year 2020. 
