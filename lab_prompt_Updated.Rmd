@@ -18,6 +18,8 @@ library(latex2exp)
 library(feasts)
 library(patchwork)
 library(forecast)
+library(tseries)
+library(knitr)
 
 
 theme_set(theme_minimal())
@@ -70,71 +72,162 @@ Conduct a comprehensive Exploratory Data Analysis on the `co2` series. This shou
 What you report in the deliverable should not be your own process of discovery, but rather a guided discussion that you have constructed so that your audience can come to an understanding as succinctly and successfully as possible. This means that figures should be thoughtfully constructed and what you learn from them should be discussed in text; to the extent that there is _any_ raw output from your analysis, you should intend for people to read and interpret it, and you should write your own interpretation as well. 
 
 
-```{r EDA}
 
-#column names
-names(co2_tsib) # index and value, i.e. yearmonth and co2 concentration
+### Introduction
 
-#range of dates
-range(co2_tsib$index) # "1959 Jan" - "1997 Dec"
+Co2 is classified as a “greenhouse gas,” meaning that it traps heat in the atmosphere and lead to rising global temperatures when in high concentrations. It can be important to track Co2 levels as rising global temperatures can lead to imbalances in ecosystems and rising water levels that impact both animal and human life.
 
-# look at distribution of co2 concentrations
-hist(co2_tsib$value) 
-# time insensitive histogram shows low amounts of the highest and lowest co2 values, 
-# makes sense because the trend is linear so we wouldn't have high counts of the min and max
+#### Description of data
+
+The current data is gathered from measurements made at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly Co2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppm) using the SIO manometric mole fraction scale. The principal investigator responsible for the initial findings of trending Co2 concentrations, Dr. Charles Keeling, initially designed a device to detect Co2 concentrations to detect Co2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing Co2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). 
+
+### Exploratory Data Analysis
+
+The time series shows a clear upward trend of global Co2 concentrations from 1959 to 1998, with an average increase in 1.26 Co2 ppmv and a standard deviation of .51 Co2 ppmv. Upon inspection of the yearly increases, the bulk of changing Co2 levels are between 0.5 and 2.0 Co2 ppmv.
+
+```{r time_series_and_hist}
 
 
-# inspecting acf and pacf graphs of co2 concentrations over time
+
+# monthly time series with the line of best fit
+
+co2_trend_plot <- co2_tsib %>% 
+  ggplot(aes(x = index, y = value)) +
+  geom_line(color = 'black', size = .5) +
+  geom_smooth(method = "lm", formula = "y ~ x",se = F, color = 'blue', size = .8) +
+  labs(title = 'Average Trend Plotted on Monthly Average Co2 ppmv') +
+  xlab('Year') +
+  ylab('Co2 concentrations (ppmv)')
+
+
+
+# average_yearly_increase
+co2_tsib_yearly_change <- co2_tsib %>% as_tibble() %>% 
+  mutate(year = year(index)) %>% 
+  group_by(year) %>% 
+  summarise(`yearly_co2` = mean(value)) %>% 
+    ungroup() %>% 
+    mutate(lag_co2 = lag(yearly_co2),
+           change = yearly_co2 - lag_co2, 
+           percent_change = ((yearly_co2 - lag_co2)/yearly_co2)*100)
+
+
+# getting average increase (i.e. size of the trend)
+yearly_mean <- mean(co2_tsib_yearly_change$change, na.rm = T) # average 1.26 units of co2 change each year
+yearly_sd <- sd(co2_tsib_yearly_change$change, na.rm = T) # with a sd of .51 units of co2
+
+change_hist <- ggplot(co2_tsib_yearly_change, aes(x = change)) + 
+  geom_histogram(color = 'gray20', fill = 'gray', binwidth = .25) +
+  scale_x_continuous(breaks = seq(floor(min(co2_tsib_yearly_change$change, na.rm =T)),
+                                  ceiling(max(co2_tsib_yearly_change$change, na.rm =T)), by = 0.5)) +
+  ggtitle('Histogram of Yearly changes in Co2 ppmv')
+# bulk of increases yearly seem to be between .5 and 2 units on the 
+
+
+co2_trend_plot / change_hist
+
+
+```
+
+
+The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons of Autumn, Winter, Spring, and Summer. Autumn and Winter are seen to have higher Co2 concentrations than in the Spring and Summer. This is likely due to the organic decomposition of plant life in these seasons (Keeling, 1960). The seasonality is evident in the consistent "peaks and valleys" in the above monthly time series plot. Evidence of seasonality is also found in the Autocorrelation Function Plot below, where a scallop/wave shaped pattern emerges among correlations between the current value with growing lags. Clearer evidence of seasonality is shown when inspecting the monthly average the Co2 ppmv, when averaged across all years in the available data.
+
+```{r seasonality_eda}
+
+
+# inspecting acf and graph of co2 concentrations over time
 
 co2_acf <- acf(co2_tsib$value, plot = F)
-co2_pacf <- pacf(co2_tsib$value, plot = T)
 
 co2_acf_plot <-  autoplot(co2_acf) + 
   labs(title = "ACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
-co2_pacf_plot <- co2_pacf %>% autoplot() + 
-  labs(title = "PACF plot of monthly co2 Concentrations", x = 'lag', y = 'Autocorrelation')
 
 
-# maybe remove this, this doesn't add much information, just further represents the association trend 
-co2_lag_plot <- gg_lag(co2_tsib, y = value) +
-  geom_point(color = "black", size = .5, alpha = .2) +  
-  labs(title = "Lag Plot of Monthly Co2 Concentrations", x = "Lagged Co2", y = "Co2") +
-  theme(legend.position = 'None',
-        axis.text.x = element_text(angle = 90))
-  
+monthly_co2_ave_plot <- co2_tsib %>% as_tibble() %>% 
+  mutate(month = month(index)) %>% 
+  group_by(month) %>% 
+  summarise(co2_monthly_ave = mean(value, na.rm = T)) %>% 
+  mutate(month_str = factor(month.abb[month], levels = month.abb)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = month_str, y = co2_monthly_ave, group = 1)) +
+  geom_line(size = .8, color = 'purple4') +
+  geom_point(size = 1.5) +
+  ggtitle("Average Co2 Concentrations Across\nEach Month") +
+  xlab('Month') +
+  ylab('Co2 Concentrations (ppmv)') +
+  theme(axis.text.x = element_text(angle = 45))
 
 
+co2_acf_plot | monthly_co2_ave_plot
 
-autoplot(co2_tsib, value) / (co2_acf_plot | co2_pacf_plot)
+
+```
+
+While the average Co2 ppmv is consistently higher each year, the variation across seasons are not exactly the same each year. Also the magnitude of how much the co2 concentrations increase each year is somewhat variable. This is evident when fitting a yearly Co2 average on the monthly time series, and inspecting the residuals from year to year. While slight, there seems to be shifting variance of residuals. These irregularities however, regress to a constant variance over time, according to a significant Augmented Dickey–Fuller Test, which suggests stationarity. In particular, this suggests to constant variance over time, as well as a non-moving average once accounting for the yearly increases in co2 ppmv. 
+
+```{r seasonality_irregularities}
 
 
-# we see high autocorrelation for many lags, and a clear upward trending average 
-# the scalloped shape of the acf plot and the oscillation in the time series plot suggest seasonality or the presence of some cycle 
-# considering this is co2, a seasonal trend via actual seasons makes sense and matches with the carbon emission cycles proposed in the above readings (particularly https://en.wikipedia.org/wiki/Keeling_Curve)
-# the pacf shows significant positive autocorrelation at lag 1 and significant negative autocorrelation at lag 2 This fits with the time series because while lage 2 is positive in the acf, when controlling for lag 1, the second lagged month may represent some change in season, which impacts the co2 concentrations.  
-# the pacf shows a wave pattern, where 
-# this time series is non-statonary as its mean appears to increase over time 
-
-co2_tsib %>% as.tibble() %>% 
+# making a plot to show how the relationship looks like with yearly averages over the seasons
+yearly_ave_w_residuals <- co2_tsib %>% as_tibble() %>% 
   mutate(year = year(index)) %>% 
   group_by(year) %>% 
   mutate(`Yearly Co2` = mean(value)) %>%
   mutate(residual = value - `Yearly Co2`) %>%
   pivot_longer(cols = c(value, `Yearly Co2`, residual), names_to = "type", values_to = "Monthly Co2") %>% 
-  mutate(residual_bool = if_else(type == "residual", "Residuals", "Monthly Time Series Plotted on Yearly Average Co2")) %>% 
+  mutate(residual_bool = if_else(type == "residual", "Residuals", "Monthly Time Series Plotted on Yearly Average Co2")) 
+
+
+yearly_ave_w_residuals_plot <- yearly_ave_w_residuals %>% 
   ggplot(aes(x = index, y = `Monthly Co2`, color = type)) +
   geom_line() +
-  facet_wrap(~residual_bool, scales = "free_y", ncol = 1)
+  facet_wrap(~residual_bool, scales = "free_y", ncol = 1) +
+  xlab('Date') +
+  theme(legend.position = "none")
+
+# residuals of a simple yearly average look fairly stationary 
+  # with some years having larger and smaller co2 variances 
 
 
-# needs:
 
-# look at smothing over the year, and talk about the growth rate
-# make a percent change plot
-# Look at a zoomed in season and show the seasonality
-# Maybe look at residuals if we were to just plot the averages (this could show irregularities)
-# fix the names on the plots
-# write a guided discussion as statements instead of questions, guided by the readings.
+adf_result <- yearly_ave_w_residuals %>% 
+  filter(residual_bool == 'Residuals') %>%
+  ungroup() %>% 
+  pull(`Monthly Co2`) %>% 
+  adf.test() 
+
+
+# Extract the relevant results into a data frame
+adf_summary <- data.frame(
+  Statistic = adf_result$statistic,
+  P_Value = adf_result$p.value,
+  Method = adf_result$method,
+  Alternative = adf_result$alternative
+)
+
+kable(adf_summary, caption = "ADF Test Results")
+
+```
+
+
+Variability in the yearly trend is also observed through plotting. While the average change in Co2 ppmv is 1.26, this increase varies per year, with some years experiencing heavier spikes in increasing Co2 concentrations than others. Additionally, upon further inspection of the monthly average trend plot above, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. When fitting a curvilinear trend to the time series, we see a closer fit the central Co2 ppmv for each year
+
+```{r trend_irregularities}
+
+
+
+# monthly time series with the curvilinear line of best fit
+
+co2_curv_trend_plot <- 
+  co2_tsib %>% 
+  ggplot(aes(x = index, y = value)) +
+  geom_line(color = 'black', size = .5) +
+  geom_smooth(method = "lm", formula = "y ~ poly(x,3)",se = F, color = 'blue', size = .8) +
+  labs(title = 'Curvilinear Trend Plotted on Monthly Average Co2 ppmv') +
+  xlab('Year') +
+  ylab('Co2 concentrations (ppmv)') 
+
+co2_trend_plot / co2_curv_trend_plot
 
 
 
