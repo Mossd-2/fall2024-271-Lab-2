@@ -79,7 +79,7 @@ Co2 is classified as a “greenhouse gas,” meaning that it traps heat in the a
 
 #### Description of data
 
-The current data is gathered from measurements made at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly Co2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppm) using the SIO manometric mole fraction scale. The principal investigator responsible for the initial findings of trending Co2 concentrations, Dr. Charles Keeling, initially designed a device to detect Co2 concentrations to detect Co2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing Co2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). 
+The current data is gathered from measurements made at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly Co2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppmv) using the SIO manometric mole fraction scale. The principal investigator responsible for the initial findings of trending Co2 concentrations, Dr. Charles Keeling, initially designed a device to detect Co2 concentrations to detect Co2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing Co2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). 
 
 ### Exploratory Data Analysis
 
@@ -205,6 +205,8 @@ adf_summary <- data.frame(
   Alternative = adf_result$alternative
 )
 
+
+yearly_ave_w_residuals_plot
 kable(adf_summary, caption = "ADF Test Results")
 
 ```
