@@ -393,7 +393,8 @@ The forecast model using the `season` variable shows very poor performance, with
 Following all appropriate steps, choose an ARIMA model to fit to the series. Discuss the characteristics of your model and how you selected between alternative ARIMA specifications. Use your model (or models) to generate forecasts to the year 2022.
 
 ```{r arima_model}
-
+# developing the arima model
+ts6.sim <- arima.sim(model=list(order=c(1,0,1), ar=rep(0.1,1), ma=rep(0.1,1)), n=10000)
 ```
 
 ## (3 points) Task 4a: Forecast atmospheric CO2 growth
