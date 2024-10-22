@@ -110,8 +110,8 @@ own interpretation as well.
 
 ### Introduction
 
-Co2 is classified as a “greenhouse gas,” which means that it traps heat
-in the atmosphere and lead to rising global temperatures when in high
+Co2 is classified as a “greenhouse gas,” meaning that it traps heat in
+the atmosphere and lead to rising global temperatures when in high
 concentrations. It can be important to track Co2 levels as rising global
 temperatures can lead to imbalances in ecosystems and rising water
 levels that impact both animal and human life.
@@ -123,7 +123,7 @@ Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a
 chemical gas analyzer sensor, with detections based on infrared
 absorption. This data measures monthly Co2 concentration levels from
 January 1959 to December 1997. Units are in parts per million of CO2
-(abbreviated as ppm) using the SIO manometric mole fraction scale. The
+(abbreviated as ppmv) using the SIO manometric mole fraction scale. The
 principal investigator responsible for the initial findings of trending
 Co2 concentrations, Dr. Charles Keeling, initially designed a device to
 detect Co2 concentrations to detect Co2 emitted from limestone near
@@ -189,18 +189,18 @@ co2_trend_plot / change_hist
 
 ![](lab_prompt_Updated_files/figure-gfm/time_series_and_hist-1.png)<!-- -->
 
-The time series also shows string evidence of seasonality corresponding
-closely with the meteorological season of autumn, winter, spring, and
-summer. Autumn and Winter are seen to have higher Co2 concentrations
-than in the spring and summer. This is likely due to the organic
+The time series also shows strong evidence of seasonality corresponding
+closely with the meteorological seasons of Autumn, Winter, Spring, and
+Summer. Autumn and Winter are seen to have higher Co2 concentrations
+than in the Spring and Summer. This is likely due to the organic
 decomposition of plant life in these seasons (Keeling, 1960). The
 seasonality is evident in the consistent “peaks and valleys” in the
-above monthly time series plot. Evidence is also found in the
-Autocorrelation Function Plot below, where a scallop/wave shaped pattern
-emerges among correlations between the current value with growing lags.
-More clear evidence of seasonality is shown when inspecting the monthly
-average the Co2 ppmv, when averaged across all years in the available
-data (below).
+above monthly time series plot. Evidence of seasonality is also found in
+the Autocorrelation Function Plot below, where a scallop/wave shaped
+pattern emerges among correlations between the current value with
+growing lags. Clearer evidence of seasonality is shown when inspecting
+the monthly average the Co2 ppmv, when averaged across all years in the
+available data.
 
 ``` r
 # inspecting acf and graph of co2 concentrations over time
@@ -222,7 +222,8 @@ monthly_co2_ave_plot <- co2_tsib %>% as_tibble() %>%
   geom_point(size = 1.5) +
   ggtitle("Average Co2 Concentrations Across\nEach Month") +
   xlab('Month') +
-  ylab('Co2 Concentrations (ppmv)')
+  ylab('Co2 Concentrations (ppmv)') +
+  theme(axis.text.x = element_text(angle = 45))
 
 
 co2_acf_plot | monthly_co2_ave_plot
@@ -230,16 +231,17 @@ co2_acf_plot | monthly_co2_ave_plot
 
 ![](lab_prompt_Updated_files/figure-gfm/seasonality_eda-1.png)<!-- -->
 
-While there is a consistent positive yearly trend, some years have
-differing variations across years, and differing magnitude of increasing
-co2 concentrations within the year. This is somewhat evident when
-fitting a yearly Co2 average on the monthly time series, and inspecting
-the residuals from year to year. While slight, there seems to be
-shifting variance of residuals. These irregularities however, regress to
-a constant variance over time as is evident by a significant Augmented
-Dickey–Fuller Test, suggesting stationarity. In particular, this
-suggests to constant variance over time, as well as a non-moving average
-once accounting for the yearly increases in co2 ppmv.
+While the average Co2 ppmv is consistently higher each year, the
+variation across seasons are not exactly the same each year. Also the
+magnitude of how much the co2 concentrations increase each year is
+somewhat variable. This is evident when fitting a yearly Co2 average on
+the monthly time series, and inspecting the residuals from year to year.
+While slight, there seems to be shifting variance of residuals. These
+irregularities however, regress to a constant variance over time,
+according to a significant Augmented Dickey–Fuller Test, which suggests
+stationarity. In particular, this suggests to constant variance over
+time, as well as a non-moving average once accounting for the yearly
+increases in co2 ppmv.
 
 ``` r
 # making a plot to show how the relationship looks like with yearly averages over the seasons
@@ -282,6 +284,13 @@ adf_summary <- data.frame(
   Alternative = adf_result$alternative
 )
 
+
+yearly_ave_w_residuals_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/seasonality_irregularities-1.png)<!-- -->
+
+``` r
 kable(adf_summary, caption = "ADF Test Results")
 ```
 
@@ -291,14 +300,15 @@ kable(adf_summary, caption = "ADF Test Results")
 
 ADF Test Results
 
-Variability in the yearly trend is also observed. While the average
-change in Co2 ppmv is 1.26, this increase varies per year, with some
-years experiencing heavier spikes in increasing Co2 concentrations than
-others. Additionally, upon further inspection of the monthly average
-trend plot above, the fitted line appears to be systematically
-overestimating values at certain points and underestimating values at
-other points. When fitting a curvilinear trend to the time series, we
-see a closer fit the central Co2 ppmv for each year
+Variability in the yearly trend is also observed through plotting. While
+the average change in Co2 ppmv is 1.26, this increase varies per year,
+with some years experiencing heavier spikes in increasing Co2
+concentrations than others. Additionally, upon further inspection of the
+monthly average trend plot above, the fitted line appears to be
+systematically overestimating values at certain points and
+underestimating values at other points. When fitting a curvilinear trend
+to the time series, we see a closer fit the central Co2 ppmv for each
+year
 
 ``` r
 # monthly time series with the curvilinear line of best fit
@@ -317,22 +327,6 @@ co2_trend_plot / co2_curv_trend_plot
 
 ![](lab_prompt_Updated_files/figure-gfm/trend_irregularities-1.png)<!-- -->
 
-3.  Irregularities
-4.  While the yearly trend is consistent, some years have higher or
-    lower variations within the year, which is evident from slightly
-    differing variances on the residuals of fitting the yearly average
-    Co2 ppmv with the monthly average Co2 ppmv.
-
-<!-- -->
-
-2.  However, while the variances shift slightly from year to year, the
-    average variance is constant, as is evident by a significant result
-    in the Augmented Dickey–Fuller Test of the residuals, suggesting
-    stationarity in the residuals when fitted on the yearly average.
-3.  Additionally, while the average trend is 1.26 Co2 ppmv, this
-    increase varies per year, with some years experiencing heavier
-    spikes in increasing Co2 concentrations than others.
-
 ## (3 points) Task 2a: Linear time trend model
 
 Fit a linear time trend model to the `co2` series, and examine the
@@ -341,6 +335,206 @@ model. Discuss whether a logarithmic transformation of the data would be
 appropriate. Fit a polynomial time trend model that incorporates
 seasonal dummy variables, and use this model to generate forecasts to
 the year 2020.
+
+``` r
+co2_linear_model <- lm(value ~ index, data = co2_tsib)
+
+# Plot residuals
+co2_tsib$residuals_linear <- residuals(co2_linear_model)
+lm_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_linear)) +
+  geom_point() +
+  labs(title = "Residuals of Linear Time Trend Model", x = "Year", y = "Residuals")
+
+lm_residuals_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/linear_trend_model-1.png)<!-- -->
+
+The residuals of the linear model exhibit a cyclical, non-linear
+pattern, indicating potential seasonality in the data. The visible
+fluctuations and lack of random distribution around zero suggest that
+the linear model is insufficient. A quadratic or polynomial model may
+provide a better fit for capturing the underlying structure.
+
+``` r
+co2_quad_model <- lm(value ~ poly(index, 2), data = co2_tsib)
+
+# Plot residuals
+co2_tsib$residuals_quad <- residuals(co2_quad_model)
+quad_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_quad)) +
+  geom_point() +
+  labs(title = "Residuals of Quadratic Time Trend Model", x = "Year", y = "Residuals")
+
+quad_residuals_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/quadratic_model_trend-1.png)<!-- -->
+
+The quadratic model’s residuals indicate a significant reduction in
+variance, demonstrating an improved fit. While some cyclical behavior
+remains, it is less prominent, though seasonality persists in the data.
+Despite the better fit of the quadratic model, further insights may be
+gained by examining the residuals after fitting a polynomial model to
+the data.
+
+``` r
+co2_poly_model <- lm(value ~ poly(index,3), data = co2_tsib)
+
+# Plot residuals
+co2_tsib$residuals_poly <- residuals(co2_poly_model)
+poly_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_poly)) +
+  geom_point() +
+  labs(title = "Residuals of Polynomial Time Trend Model", x = "Year", y = "Residuals")
+
+poly_residuals_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/polynomial_model-1.png)<!-- -->
+
+The third-order polynomial model demonstrates improved residual behavior
+compared to quadratic and linear models. We chose to stop at this order
+to prevent excessive overfitting, as higher-order polynomials showed
+diminishing returns in model performance.
+
+Apart from transforming the orders of the model, we were interested in
+data transformations - specifically logarithmic. As such we expermiented
+with a logarithmic dataset to observe the pattern of the data values.
+
+``` r
+# Log transformation
+co2_tsib$log_value <- log(co2_tsib$value)
+
+# Plot log-transformed data
+log_data_plot <- ggplot(co2_tsib, aes(x = index, y = log_value)) +
+  geom_line() +
+  labs(title = "Log-transformed Co2 Concentrations", x = "Year", y = "Log of Co2 concentrations")
+
+log_data_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/log_transformed-1.png)<!-- -->
+
+The logarithmic transformation reduces variance but offers minimal
+improvement compared to traditional plotting. This limited impact is
+likely due to the cyclical nature of the time series, which the
+transformation does not adequately address.
+
+To address the cyclical behavior, we developed another polynomial model
+that includes a `month` variable. The average monthly CO2 emissions
+indicate significant cyclic patterns at the monthly level. By
+incorporating this variable, we anticipate an improvement in the fit of
+our time series model.
+
+``` r
+# Ensure index is in Date format
+co2_tsib$index_date <- as.Date(co2_tsib$index)
+
+# Create seasonal dummy variables
+co2_tsib$month <- factor(month(co2_tsib$index))
+co2_tsib$year <- factor(year(co2_tsib$index))
+
+# Define a function to convert months into seasons
+co2_tsib$season <- case_when(
+  month(co2_tsib$index) %in% c(12, 1, 2) ~ "Winter",
+  month(co2_tsib$index) %in% c(3, 4, 5) ~ "Spring",
+  month(co2_tsib$index) %in% c(6, 7, 8) ~ "Summer",
+  month(co2_tsib$index) %in% c(9, 10, 11) ~ "Autumn"
+)
+
+# Convert season into a factor
+co2_tsib$season <- factor(co2_tsib$season, levels = c("Winter", "Spring", "Summer", "Autumn"))
+
+# Fit polynomial model with seasonal dummies
+poly_month <- lm(value ~ poly(index, 3) + month, data = co2_tsib)
+poly_month_year <- lm(value ~ poly(index, 3) + month + year, data = co2_tsib)
+poly_season <- lm(value ~ poly(index, 3) + season, data = co2_tsib)
+
+# Get residuals
+co2_tsib$residuals_poly_month <- residuals(poly_month)
+co2_tsib$residuals_poly_month_year <- residuals(poly_month_year)
+co2_tsib$residuals_poly_season <- residuals(poly_season)
+
+# residual plots
+poly_month_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_poly_month)) +
+  geom_point() +
+  labs(title = "Month Dummy Variable Third Order Polynomial Residuals", 
+       # subtitle = "Model includes month as a categorical variable", 
+       x = "Year", 
+       y = "Residuals")
+
+poly_month_year_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_poly_month_year)) +
+  geom_point() +
+  labs(title = "Month and Year Dummy Variables Third Order Polynomial Residual", 
+       # subtitle = "Model includes both month and year as categorical variables", 
+       x = "Year", 
+       y = "Residuals")
+
+poly_season_plot <- ggplot(co2_tsib, aes(x = index, y = residuals_poly_season)) +
+  geom_point() +
+  labs(title = "Season Dummy Variable Third Order Polynomial Residual", 
+       # subtitle = "Model includes season as a categorical variable (Winter, Spring, Summer, Autumn)", 
+       x = "Year", 
+       y = "Residuals")
+
+# Combine the three plots side by side
+residual_combined_plot <- poly_month_plot + poly_month_year_plot + poly_season_plot +
+  plot_layout(nrow = 3) # Set layout with 3 columns
+
+# Display the combined plot
+print(residual_combined_plot)
+```
+
+![](lab_prompt_Updated_files/figure-gfm/seasonal_polynomial-1.png)<!-- -->
+Incorporating the `month` dummy variable brought the residuals closer to
+zero, ranging between 1 and -1, but they still displayed a non-random
+pattern. To refine the model, we added a `year` dummy variable, which
+improved the residual fit, though it was omitted due to
+multicollinearity concerns. Finally, we introduced a season categorical
+variable, grouping the months into quarters. This adjustment centered
+the residuals around zero with a random distribution, though
+fluctuations remained between 2 and -2. We proceeded with this model,
+considering it the most robust.
+
+Using the polynomial model with the `season` dummy variable, we then
+developed a forecast for CO2 emissions through 2020.
+
+``` r
+# Generate future time points (e.g., monthly until 2020)
+future_years <- seq(from = max(co2_tsib$index_date) + months(1), to = as.Date("2020-12-01"), by = "month")
+future_data <- data.frame(index = future_years, month = factor(month(future_years)))
+
+# # Create seasonal dummy variables
+# future_data$month <- factor(month(future_data$index))
+# future_data$year <- factor(year(future_data$index))
+
+# Get the season
+future_data$season <- case_when(
+  month(future_data$index) %in% c(12, 1, 2) ~ "Winter",
+  month(future_data$index) %in% c(3, 4, 5) ~ "Spring",
+  month(future_data$index) %in% c(6, 7, 8) ~ "Summer",
+  month(future_data$index) %in% c(9, 10, 11) ~ "Autumn"
+)
+
+# Predict using the model
+future_data$forecast <- predict(poly_season, newdata = future_data)
+
+# Plot the forecasts
+forecast_plot <- ggplot() +
+  geom_line(data = co2_tsib, aes(x = index, y = value), color = "black") +
+  geom_line(data = future_data, aes(x = index, y = forecast), color = "red") +
+  labs(title = "Forecast of Co2 Concentrations to 2020", x = "Year", y = "Co2 concentrations (ppmv)")
+
+forecast_plot
+```
+
+![](lab_prompt_Updated_files/figure-gfm/forecasting_model-1.png)<!-- -->
+
+The forecast model using the `season` variable shows very poor
+performance, with future predictions deviating significantly from
+expected values, likely due to a misfitting model or improper scaling of
+the forecasted data. To resolve this, we turn to an ARIMA model, which
+may better capture the time series’ underlying patterns and improve
+forecast accuracy.
 
 ## (3 points) Task 3a: ARIMA times series model
 
