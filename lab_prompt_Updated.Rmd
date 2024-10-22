@@ -24,6 +24,7 @@ library(knitr)
 
 
 theme_set(theme_bw())
+# theme_set(theme_minimal())
 knitr::opts_chunk$set(dpi=1000)
 ```
 
@@ -86,7 +87,7 @@ The current data is gathered from measurements made at the Mauna Loa Observatory
 
 The time series shows a clear upward trend of global Co2 concentrations from 1959 to 1998, with an average increase in 1.26 Co2 ppmv and a standard deviation of .51 Co2 ppmv. Upon inspection of the yearly increases, the bulk of changing Co2 levels are between 0.5 and 2.0 Co2 ppmv.
 
-```{r time_series_and_hist}
+```{r time_series_and_hist, warning=FALSE}
 # monthly time series with the line of best fit
 
 co2_trend_plot <- co2_tsib %>% 
@@ -390,6 +391,11 @@ The forecast model using the `season` variable shows very poor performance, with
 ## (3 points) Task 3a: ARIMA times series model
 
 Following all appropriate steps, choose an ARIMA model to fit to the series. Discuss the characteristics of your model and how you selected between alternative ARIMA specifications. Use your model (or models) to generate forecasts to the year 2022.
+
+```{r arima_model}
+# developing the arima model
+ts6.sim <- arima.sim(model=list(order=c(1,0,1), ar=rep(0.1,1), ma=rep(0.1,1)), n=10000)
+```
 
 ## (3 points) Task 4a: Forecast atmospheric CO2 growth
 
