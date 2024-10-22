@@ -2,7 +2,8 @@
 title: 'Statistical Methods for Discrete Response, Time Series, and Panel Data (W271): Lab 2'
 geometry: margin=1in
 output:
-  github_document: default
+  pdf_document
+  # github_document: default
 ---
 
 # The Keeling Curve
