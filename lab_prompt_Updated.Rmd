@@ -21,6 +21,7 @@ library(patchwork)
 library(forecast)
 library(tseries)
 library(knitr)
+library(fable)
 
 
 theme_set(theme_bw())
@@ -392,9 +393,123 @@ The forecast model using the `season` variable shows very poor performance, with
 
 Following all appropriate steps, choose an ARIMA model to fit to the series. Discuss the characteristics of your model and how you selected between alternative ARIMA specifications. Use your model (or models) to generate forecasts to the year 2022.
 
-```{r arima_model}
-# developing the arima model
-ts6.sim <- arima.sim(model=list(order=c(1,0,1), ar=rep(0.1,1), ma=rep(0.1,1)), n=10000)
+```{r stationarity}
+# checking for stationarity
+adf.test(co2_tsib$value)
+```
+With a p-value of 0.2269, the time series data fails to reject the null hypothesis of non-stationarity. As a result, we will proceed with differencing the data to make it stationary, which is a crucial step before fitting the ARIMA model effectively.
+
+```{r arima_differencing, warning=FALSE}
+# First differencing the series to remove trend
+# Added NA to ensure the data has equivalent numbers of rows.
+co2_tsib$diff_value <- c(NA,diff(co2_tsib$value, differences = 1))
+
+# Plot the differenced series to check if it looks stationary
+ggplot(co2_tsib, aes(x = index, y = diff_value)) +
+  geom_line() +
+  labs(title = "Differenced CO2 Concentrations", x = "Year", y = "Differenced CO2 concentrations (ppmv)")
+
+# post-check for stationarity
+# remove NA for adf test
+adf.test(na.omit(co2_tsib$diff_value))
+```
+
+
+With first differencing successfully making the data stationary, we can now proceed with constructing the ARIMA (p,d,q) model using a d value of 1. The next step will involve fine-tuning the p and q parameters to further optimize the model for accurate forecasting.
+
+```{r lags}
+# Fit ARIMA model by testing different lags using the AIC criterion
+model.aic <- co2_tsib %>%
+  model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
+              ic = "aic", stepwise = FALSE))
+
+# Report the best model
+model.aic %>%
+  report()
+
+# Extract residuals from the ARIMA model
+residuals_arima <- residuals(model.aic)
+
+# Plot the residuals over time
+residual_plot <- autoplot(residuals_arima) +
+  labs(title = "Residuals of ARIMA Model", x = "Year", y = "Residuals")
+
+# Display the plot
+residual_plot
+
+# Plot the ACF of the residuals
+acf_plot <- ggAcf(residuals_arima) +
+  labs(title = "ACF of ARIMA Model Residuals", x = "Lag", y = "ACF")
+
+# Display the ACF plot
+print(acf_plot)
+
+# Q-Q plot to check normality of residuals
+qq_plot <- ggplot(data = as.data.frame(residuals_arima), aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(title = "Q-Q Plot of ARIMA Model Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+# Display the Q-Q plot
+print(qq_plot)
+
+# Ljung Box Test on residuals
+# Calculate the number of observations
+N <- nrow(co2_tsib)
+
+# Determine the number of lags (using rule of thumb: sqrt(N))
+lags <- floor(sqrt(N))
+
+# get residuals
+resid.ts<-model.aic %>%
+  augment() %>%
+  select(.resid) %>%
+  as.ts()
+
+Box.test(resid.ts, lag = lags, type = "Ljung-Box")
+
+# # Fit ARIMA model by testing different lags using the AICc criterion
+# model.aicc <- co2_tsib %>%
+#   model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
+#               ic = "aicc", stepwise = FALSE))
+# 
+# # Report the best model
+# model.aicc %>%
+#   report()
+# 
+# # Fit ARIMA model by testing different lags using the BIC criterion
+# model.bic <- co2_tsib %>%
+#   model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
+#               ic = "bic", stepwise = FALSE))
+# 
+# # Report the best model
+# model.bic %>%
+#   report()
+
+```
+The AIC analysis identified the optimal ARIMA model parameters as p=3, d=1, and q=1. The residuals are centered around zero with random fluctuations, indicating the model has captured most of the underlying structure. However, the ACF plot shows significant spikes at lags 10 and 24, indicating some remaining autocorrelation, and the Ljung-Box test confirms this with a p-value of < 2.2e-16, suggesting the need for additional terms to improve the model fit. Despite this, the QQ plot indicates that the residuals follow normality well. With these considerations, we can proceed with forecasting the time series data through 2022.
+
+```{r arima_forecasting}
+# Determine how many months to forecast (from the last observation to Dec 2022)
+last_observation <- max(co2_tsib$index)
+end_of_2022 <- as.Date("2022-12-31")
+
+# Calculate the number of months to forecast
+horizon <- as.numeric(
+  difftime(end_of_2022, last_observation, units = "weeks")) / 4.34524  # Convert weeks to months
+
+# Forecast using the ARIMA model until 2022
+forecast_arima <- model.aic %>%
+  forecast(h = round(horizon))  # Use calculated horizon
+
+# Plot the forecast
+forecast_plot <- forecast_arima %>%
+  autoplot(co2_tsib) +
+  labs(title = "ARIMA Model Forecast of CO2 Concentrations to 2022", 
+       x = "Year", y = "CO2 Concentrations (ppmv)")
+
+# Show the plot
+print(forecast_plot)
 ```
 
 ## (3 points) Task 4a: Forecast atmospheric CO2 growth
