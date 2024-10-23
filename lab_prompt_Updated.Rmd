@@ -41,7 +41,7 @@ The current data is gathered from measurements made under Dr. Charles Keeling's 
 
 The time series shows a clear upward trend of global CO2 concentrations from 1959 to 1998, with an average increase in 1.26 CO2 ppmv and a standard deviation of .51 CO2 ppmv. Upon inspection of the yearly increases, the bulk of changing CO2 levels are between 0.5 and 2.0 CO2 ppmv.
 
-```{r time_series_and_hist, warning=FALSE, echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
+```{r time_series_and_hist, warning=FALSE, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
 # import data
 co2_tsib <- as_tsibble(co2)
 # monthly time series with the line of best fit
@@ -108,9 +108,14 @@ co2_acf_plot | monthly_co2_ave_plot
 ```
 We also see a scallop/wave shaped pattern among correlations between the current value with growing lags. Clearer evidence of seasonality is shown when inspecting the monthly average the Co2 ppmv, when averaged across all years in the available data. CO2 contration peaks at the start of summer, and drops to a low in the fall, before rising again. This is likely due to the organic decomposition of plant life in these seasons (Keeling, 1960). 
 
-We now study the variance over time. While the average CO2 ppmv is consistently higher each year, We fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they regress to a constant variance over time, according to a significant Augmented Dickey–Fuller Test, which suggests stationarity in variance. Thus, once we detrend the series by accounting for the yearly increases in CO2 ppmv, there is likely a constant variance over time, as well as a non-moving average.
+We now study the time series' stationarity. We first conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
 
-```{r seasonality irregularities, echo = FALSE}
+```{r seasonality irregularities, echo = FALSE, fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
+
+# checking for stationarity
+# adf.test(co2_tsib$value)
+
+
 # making a plot to show how the relationship looks like with yearly averages over the seasons
 yearly_ave_w_residuals <- co2_tsib %>% as_tibble() %>% 
   mutate(year = year(index)) %>% 
@@ -128,51 +133,15 @@ yearly_ave_w_residuals_plot <- yearly_ave_w_residuals %>%
   xlab('Date') +
   theme(legend.position = "none")
 
-# residuals of a simple yearly average look fairly stationary 
-  # with some years having larger and smaller co2 variances 
-adf_result <- yearly_ave_w_residuals %>% 
-  filter(residual_bool == 'Residuals') %>%
-  ungroup() %>% 
-  pull(`Monthly Co2`) %>% 
-  adf.test() 
-
-
-# Extract the relevant results into a data frame
-adf_summary <- data.frame(
-  Statistic = adf_result$statistic,
-  P_Value = adf_result$p.value,
-  Method = adf_result$method,
-  Alternative = adf_result$alternative
-)
-
-
 yearly_ave_w_residuals_plot
-kable(adf_summary, caption = "ADF Test Results")
 
 ```
 
-Variability in the yearly trend is also observed through plotting. While the average change in Co2 ppmv is 1.26, this increase varies per year, with some years experiencing heavier spikes in increasing Co2 concentrations than others. Additionally, upon further inspection of the monthly average trend plot above, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. When fitting a curvilinear trend to the time series, we see a closer fit the central Co2 ppmv for each year
 
-```{r trend_irregularities, echo = FALSE}
-# monthly time series with the curvilinear line of best fit
-co2_curv_trend_plot <- 
-  co2_tsib %>% 
-  ggplot(aes(x = index, y = value)) +
-  geom_line(color = 'black', size = .5) +
-  geom_smooth(method = "lm", formula = "y ~ poly(x,3)",se = F, color = 'blue', size = .8) +
-  labs(title = 'Curvilinear Trend Plotted on Monthly Average Co2 ppmv') +
-  xlab('Year') +
-  ylab('Co2 concentrations (ppmv)') 
-
-co2_trend_plot / co2_curv_trend_plot
-
-
-
-```
 
 ## (3 points) Task 2a: Linear time trend model
 
-We now fit a linear time trend model the `co2` series, and examine the characteristics of the residuals.
+We now fit a linear time trend model the `co2` series, and examine the characteristics of the fit and residuals.
 
 ```{r, echo = FALSE}
 # Fit linear, quadratic, and cubic (3rd-degree polynomial) models at once
@@ -231,7 +200,7 @@ lm_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = linear_model_resid)) +
 lm_plot / lm_residuals_plot
 ```
 
-The residuals of the linear model exhibit a cyclical, non-linear pattern, indicating that the model does not capture the  seasonality in the data. The overall curve also suggests that the linear model insufficiently captures the overall trend. We now try a quadratic model, which may better capture the underlying trend
+Upon inspection of linear fit, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. This indicates that perhaps a higher order polynomial might produce a better fit of the overall trend. The residuals of the linear model also exhibit a cyclical, non-linear pattern, indicating that the model does not capture the  seasonality in the data. The overall curve also suggests that the linear model insufficiently captures the overall trend. We now try a quadratic model, which may better capture the underlying trend.
 
 ```{r quadratic_model_trend,echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
 
@@ -278,7 +247,7 @@ The third-order polynomial model demonstrates improved residual behavior compare
 
 Apart from transforming the orders of the model, we were interested in data transformations - specifically logarithmic. As such we expermiented with a logarithmic dataset to observe the pattern of the data values.
 
-```{r log_transformed, echo = FALSE,fig.align='center', fig.height=3.5, fig.width=7, out.width="100%"}
+```{r log_transformed, echo = FALSE,fig.align='center', fig.height=3, fig.width=7, out.width="100%"}
 # Log transformation
 co2_tsib$log_value <- log(co2_tsib$value)
 
@@ -378,7 +347,7 @@ Incorporating the `month` dummy variable brought the residuals closer to zero, r
 ```{r plot seasonal,  echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%"}
 poly_season_plot | poly_season_residuals_plot
 ```
-We see that using the `season` variable centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We now proceed with this model, the polynomial model with the `season` dummy variable, as it has the residuals plot that most look like a random distribution around the red linecentered on zero, and developed a forecast for CO2 emissions through 2020.
+We see that using the `season` variable centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We now proceed with this model, the polynomial model with the `season` dummy variable, as it has the residuals plot that most look like a random distribution around the red line centered on zero, and developed a forecast for CO2 emissions through 2020.
 ```{r forecasting_model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
 # Generate future monthly dates starting from January 1998 to December 2020
 future_index <- seq(from = as.Date("1998-01-01"),  # Start in January 1998
@@ -423,14 +392,7 @@ The forecast model using the `season` variable shows decent performance, and pre
 
 ## (3 points) Task 3a: ARIMA times series model
 
-Following all appropriate steps, choose an ARIMA model to fit to the series. Discuss the characteristics of your model and how you selected between alternative ARIMA specifications. Use your model (or models) to generate forecasts to the year 2022.
-
-We first conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in our EDA, we seem to have a clear upward trend, indicating non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively.
-```{r stationarity, echo = FALSE}
-# checking for stationarity
-# adf.test(co2_tsib$value)
-```
-
+As seen in our EDA, there is non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively.
 
 ```{r arima_differencing, warning=FALSE, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%" }
 # Apply both first-order and seasonal (12th-order) differencing
@@ -623,6 +585,7 @@ forecast_2100_table<-forecast_2100 %>%select("index",".mean","std") %>%
 kable(forecast_2100_table, caption = "CO2 Forecasts in 2100")
 ```
 
+
 \newpage
 # Report from the Point of View of the Present
 
@@ -661,3 +624,23 @@ Seasonally adjust the weekly NOAA data, and split both seasonally-adjusted (SA) 
 ## (3 points) Task Part 6b: How bad could it get?
 
 With the non-seasonally adjusted data series, generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times (consider prediction intervals as well as point estimates in your answer). Generate a prediction for atmospheric CO2 levels in the year 2122. How confident are you that these will be accurate predictions?
+
+
+```{r archive, echo = FALSE}
+# 
+# Variability in the yearly trend is also observed through plotting. While the average change in Co2 ppmv is 1.26, this increase varies per year, with some years experiencing heavier spikes in increasing Co2 concentrations than others. Additionally, upon further inspection of the monthly average trend plot above, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. When fitting a curvilinear trend to the time series, we see a closer fit the central Co2 ppmv for each year
+# 
+# ```{r trend_irregularities, echo = FALSE,fig.align='center', fig.height=3, fig.width=10, out.width="100%"}}
+# # monthly time series with the curvilinear line of best fit
+# co2_curv_trend_plot <- 
+#   co2_tsib %>% 
+#   ggplot(aes(x = index, y = value)) +
+#   geom_line(color = 'black', size = .5) +
+#   geom_smooth(method = "lm", formula = "y ~ poly(x,3)",se = F, color = 'blue', size = .8) +
+#   labs(title = 'Curvilinear Trend Plotted on Monthly Average Co2 ppmv') +
+#   xlab('Year') +
+#   ylab('Co2 concentrations (ppmv)') 
+# 
+# co2_trend_plot / co2_curv_trend_plot
+
+```
