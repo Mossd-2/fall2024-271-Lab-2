@@ -18,6 +18,8 @@ library(tseries)
 library(knitr)
 library(fable)
 library(distributional)
+#install.packages("kableExtra")
+library(kableExtra)
 
 
 theme_set(theme_bw())
@@ -37,11 +39,9 @@ CO2 is classified as a “greenhouse gas,” meaning that it traps heat in the a
 
 ## (3 points) Task 1a: CO2 data
 
-The current data is gathered from measurements made under Dr. Charles Keeling's study at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly CO2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppmv) using the SIO manometric mole fraction scale. Dr. Keeling initially designed a device to detect Co2 concentrations to detect CO2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing CO2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998).
+The current data is gathered from measurements made under Dr. Charles Keeling's study at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly CO2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppmv) using the SIO manometric mole fraction scale. Dr. Keeling initially designed a device to detect Co2 concentrations to detect CO2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing CO2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). The time series shows a clear upward trend of global CO2 concentrations from 1959 to 1998, with an average increase in 1.26 CO2 ppmv and a standard deviation of .51 CO2 ppmv. Upon inspection of the yearly increases, the bulk of changing CO2 levels are between 0.5 and 2.0 CO2 ppmv.
 
-The time series shows a clear upward trend of global CO2 concentrations from 1959 to 1998, with an average increase in 1.26 CO2 ppmv and a standard deviation of .51 CO2 ppmv. Upon inspection of the yearly increases, the bulk of changing CO2 levels are between 0.5 and 2.0 CO2 ppmv.
-
-```{r time_series_and_hist, warning=FALSE, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
+```{r time-series-and-hist, warning=FALSE, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%", fig.cap = "Data source: CO2 measurements from Mauna Loa Observatory"}
 # import data
 co2_tsib <- as_tsibble(co2)
 # monthly time series with the line of best fit
@@ -75,12 +75,14 @@ change_hist <- ggplot(co2_tsib_yearly_change, aes(x = change)) +
     x = "Change",
     y = "Frequency"
   )
+
 co2_trend_plot / change_hist
+
 ```
 
 The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons of Autumn, Winter, Spring, and Summer. We now look at the ACF plot and average CO2 concentration for each month to gain further clarity on the seasonality.
 
-```{r seasonality_eda, echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
+```{r seasonality-eda, echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%",fig.cap = "Observing seasonality in CO2 concentration"}
 # inspecting acf and graph of co2 concentrations over time
 
 co2_acf <- acf(co2_tsib$value, plot = F)
@@ -98,7 +100,7 @@ monthly_co2_ave_plot <- co2_tsib %>% as_tibble() %>%
   ggplot(aes(x = month_str, y = co2_monthly_ave, group = 1)) +
   geom_line(size = .8, color = 'purple4') +
   geom_point(size = 1.5) +
-  ggtitle("Average Co2 Concentrations Across\nEach Month") +
+  ggtitle("Average CO2 Concentrations Across\nEach Month") +
   xlab('Month') +
   ylab('Co2 Concentrations (ppmv)') +
   theme(axis.text.x = element_text(angle = 45))
@@ -110,7 +112,7 @@ We also see a scallop/wave shaped pattern among correlations between the current
 
 We now study the time series' stationarity. We first conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
 
-```{r seasonality irregularities, echo = FALSE, fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
+```{r seasonality-irregularities, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap = "Studying variance over time"}
 
 # checking for stationarity
 # adf.test(co2_tsib$value)
@@ -138,12 +140,12 @@ yearly_ave_w_residuals_plot
 ```
 
 
-
+\newpage
 ## (3 points) Task 2a: Linear time trend model
 
 We now fit a linear time trend model the `co2` series, and examine the characteristics of the fit and residuals.
 
-```{r, echo = FALSE}
+```{r linear quad and poly models , echo = FALSE}
 # Fit linear, quadratic, and cubic (3rd-degree polynomial) models at once
 co2_models <- co2_tsib %>%
   model(
@@ -180,7 +182,7 @@ co2_tsib <- co2_tsib %>%
 ```
 
 
-```{r linear_trend_model,echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
+```{r linear-model-plots,echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%",fig.cap = "Evaluating a Linear Model"}
 
 # Plot time series with linear model line
 lm_plot <- ggplot(co2_tsib, aes(x = index)) +
@@ -202,7 +204,8 @@ lm_plot / lm_residuals_plot
 
 Upon inspection of linear fit, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. This indicates that perhaps a higher order polynomial might produce a better fit of the overall trend. The residuals of the linear model also exhibit a cyclical, non-linear pattern, indicating that the model does not capture the  seasonality in the data. The overall curve also suggests that the linear model insufficiently captures the overall trend. We now try a quadratic model, which may better capture the underlying trend.
 
-```{r quadratic_model_trend,echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
+
+```{r quadratic-model-plots,echo = FALSE,fig.align='center', fig.height=4.5, fig.width=10, out.width="100%",fig.cap = "Evaluating a Quadratic Model"}
 
 # Plot time series with quadratic model predictions
 quad_plot <- ggplot(co2_tsib, aes(x = index)) +
@@ -222,9 +225,10 @@ quad_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = quad_model_resid)) +
 quad_plot / quad_residuals_plot
 ```
 
+\newpage
 The quadratic model's residuals indicate a small reduction in variance, demonstrating a slightly improved fit. However, the cyclical behavior remains, indicating that seasonality is unaccounted for in the model still. There is also an overall non-random trend in the residuals, indicating that the model still may not capture all the structural details. We now fit a polynomial model to the data to see if there is an improved fit.
 
-```{r polynomial_model, echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%"}
+```{r polynomial-model-plots, echo = FALSE,fig.align='center', fig.height=5, fig.width=10, out.width="100%",fig.cap = "Evaluating a Polynomial (3) Model"}
 
 # Plot time series with linear model line
 poly_plot <- ggplot(co2_tsib, aes(x = index)) +
@@ -247,7 +251,7 @@ The third-order polynomial model demonstrates improved residual behavior compare
 
 Apart from transforming the orders of the model, we were interested in data transformations - specifically logarithmic. As such we expermiented with a logarithmic dataset to observe the pattern of the data values.
 
-```{r log_transformed, echo = FALSE,fig.align='center', fig.height=3, fig.width=7, out.width="100%"}
+```{r log-transformed-plot, echo = FALSE,fig.align='center', fig.height=3, fig.width=5, out.width="80%",fig.cap = "Evaluating effect of taking a log on the series"}
 # Log transformation
 co2_tsib$log_value <- log(co2_tsib$value)
 
@@ -263,7 +267,7 @@ The logarithmic transformation reduces variance but offers minimal improvement c
 
 To address the cyclical behavior, we developed another polynomial model that includes each month as a variable. The average monthly CO2 emissions indicate significant cyclic patterns at the monthly level. By incorporating this variable, we anticipate an improvement in the fit of our time series model.
 
-```{r seasonal_polynomial_data ,echo = FALSE}
+```{r seasonal polynomial data ,echo = FALSE}
 # Create seasonal dummy variables
 co2_tsib$month <- factor(month(co2_tsib$index))
 co2_tsib$year <- factor(year(co2_tsib$index))
@@ -312,7 +316,7 @@ co2_tsib <- co2_tsib %>%
 ```
 
 
-```{r plot month , echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%"}
+```{r plot-month, echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%",fig.cap = "Evaluating a Polynomial (3) with month variable model"}
 # Plot time series with poly (3) and month variable
 poly_month_plot <- ggplot(co2_tsib, aes(x = index)) +
   geom_line(aes(y=value), color = 'black', size = .5) +  # Original time series
@@ -344,11 +348,11 @@ poly_month_plot | poly_month_residuals_plot
 ```
 Incorporating the `month` dummy variable brought the residuals closer to zero, ranging between 1 and -1, but they still displayed a seasonal pattern. To refine the model, we grouped the months into quarters, to represent the seasons as a categorical variable, `season`.
 
-```{r plot seasonal,  echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%"}
+```{r plot-seasonal,  echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%",fig.cap = "Evaluating a Polynomial (3) with season variable model"}
 poly_season_plot | poly_season_residuals_plot
 ```
 We see that using the `season` variable centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We now proceed with this model, the polynomial model with the `season` dummy variable, as it has the residuals plot that most look like a random distribution around the red line centered on zero, and developed a forecast for CO2 emissions through 2020.
-```{r forecasting_model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
+```{r forecasting-model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%",fig.cap = "Forecasting CO2 levels up to 2020 using a Polynomial (3) with month variable model"}
 # Generate future monthly dates starting from January 1998 to December 2020
 future_index <- seq(from = as.Date("1998-01-01"),  # Start in January 1998
                     to = as.Date("2020-12-01"), by = "1 month")  # Generate monthly dates up to Dec 2020
@@ -394,7 +398,7 @@ The forecast model using the `season` variable shows decent performance, and pre
 
 As seen in our EDA, there is non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively.
 
-```{r arima_differencing, warning=FALSE, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%" }
+```{r arima-differencing, warning=FALSE, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%",fig.cap = "Differenced series looks more stationary in the mean and variance"}
 # Apply both first-order and seasonal (12th-order) differencing
 co2_tsib <- co2_tsib %>%
   mutate(diff_value = difference(difference(value, lag = 12),lag=1)) # First-order and seasonal differencing
@@ -414,8 +418,11 @@ diff_plot
 # remove NA for adf test
 # adf.test(na.omit(co2_tsib$diff_value))
 ```
-The plot of the differenced time series does look more stationary in the mean and variance; which is confirmed by a 0.01 p-value yielded from the Augmented Dickey-Fuller Test, indicating sufficient evidence to reject the null hypothesis of non-stationarity. We now look at the ACF and PACF plots of the differenced time series, to inform how we should construct our ARIMA model. 
-```{r acf_pacf,warning=FALSE,echo=FALSE,fig.align='center',fig.height=4,fig.width=10,out.width="100%"}
+The plot of the differenced time series does look more stationary in the mean and variance; which is confirmed by a 0.01 p-value yielded from the Augmented Dickey-Fuller Test, indicating sufficient evidence to reject the null hypothesis of non-stationarity. We now look at the ACF and PACF plots of the differenced time series, to inform how we should construct our ARIMA model.
+
+\newpage
+
+```{r acf-pacf,warning=FALSE,echo=FALSE,fig.align='center',fig.height=4,fig.width=10,out.width="100%",fig.cap = "Evaluating ACF and PACF for differenced series"}
 acf_diff <- ACF(co2_tsib, diff_value, lag_max = 24) %>%
   autoplot() +
   labs(
@@ -436,7 +443,7 @@ acf_diff | pacf_diff
 ```
 Both ACF and PACF plots show strong auto-correlation with lag 1, and the ACF cutting off strong after lag 1, and the PACF having a significant spike at lag 1, and tapering off a little more. This might indicate that our model has a MA(1) component. The spike at lag 12 in the ACF might also indicate a seasonal MA component. 
 
-```{r model_bic, echo = FALSE, message = FALSE}
+```{r model bic, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic <- co2_tsib %>%
   model(
@@ -450,7 +457,7 @@ model.bic <- co2_tsib %>%
 ```
 The ARIMA function behaved as expected, and returned an ARIMA(0,1,1)(0,1,1)$_{12}$ function, with BIC = 182.32. We will now look at the residuals for this model.
 
-```{r residuals, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%", echo = FALSE, warning = FALSE}
+```{r arima-residuals, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA model "}
 # Extract residuals from the ARIMA model
 residuals_arima <- residuals(model.bic)
 
@@ -473,7 +480,7 @@ residual_plot|acf_plot |qq_plot
 
 ```
 
-```{r ljung box test on residuals, echo = FALSE}
+```{r ljung box test on residuals, echo = FALSE, warning= FALSE}
 # Ljung Box Test on residuals
 resid.ts<-model.bic %>%
   augment() %>%
@@ -482,8 +489,9 @@ resid.ts<-model.bic %>%
 # Box.test(resid.ts, lag = 24, type = "Ljung-Box")
 ```
 The residuals look random, there are no significant autocorrelations in the ACF, and they closely follow a a normal distribution in the Q-Q plot. These all indicate that the model has captured most of the underlying structure of our time series. A Ljung-Box test also yielded a p-value of 0.6733, further confirming that there is insufficient statistical evidence to reject the null hypothesis that there is no autocorrelation. We can proceed with forecasting the time series data through 2022.
+\newpage
 
-```{r arima_forecasting, fig.align='center',fig.height=4.5,fig.width=10,out.width="100%", echo = FALSE, warning= FALSE}
+```{r arima-forecasting, fig.align='center',fig.height=4,fig.width=10,out.width="100%", echo = FALSE, warning= FALSE,fig.cap = "Forecasting up to 2022 using an ARIMA model", fig.pos = "H"}
 
 # Generate forecasts from model.bic
 forecast_arima <- model.bic %>%
@@ -500,6 +508,7 @@ autoplot(co2_tsib, value) +  # Plot original data
 
 ## (3 points) Task 4a: Forecast atmospheric CO2 growth
 
+We now forecast when atmospheric CO2 is expected to be at 420 ppm and 500 ppm for the first and final times, as seen in the table below. 
 
 ```{r long term forecast part one, echo = FALSE}
 # Generate forecasts for a long horizon (up to 2100)
@@ -550,11 +559,11 @@ ci_upper_500 <- mean_500 + 1.28 * sd_500
 
 ```
 
-We now forecast when atmospheric CO2 is expected to be at 420 ppm and 500 ppm for the first and final times, as seen in the table below. 
-```{r forecast 420 500, echo = FALSE}
+
+```{r forecastone, echo = FALSE, message = FALSE}
 # Create a data frame with blanks
 co2_table <- data.frame(
-  "CO2 Level" = c("420 ppm", "500 ppm"),  # CO2 levels to track
+  `CO2 Level` = c("420 ppm", "500 ppm"),  # CO2 levels to track
   `First Month` = c("2031 May", "2083 Apr"),      # Placeholder for month first reached
   `First Value` = c("420.1 (402.3, 438.0)", "500.4 (437.9,562.9)"),       # Placeholder for confidence interval
   `Last Month` = c("2035 Oct", "2085 Dec"),       # Placeholder for month last reached
@@ -562,12 +571,13 @@ co2_table <- data.frame(
 )
 
 # Print the table using kable
-kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80% Confidence Intervals")
+kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80\\% Confidence Intervals")%>%
+  kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
 
 Our model also forecasts CO2 levels in the year 2100. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as **insert efforts here**. Thus, since these are very human-activty dependent, it is unlikely to be super accurate.
 
-```{r forecast 2100, echo = FALSE, message = FALSE}
+```{r forecasttwo, echo = FALSE, message = FALSE}
 # Extract the forecast for the year 2100
 forecast_2100 <- forecast_df %>%
   filter(year(index) == 2100)
@@ -579,11 +589,13 @@ forecast_2100_table<-forecast_2100 %>%select("index",".mean","std") %>%
   rename(
     Date =index,
     Value = .mean,
-    Standard_Deviation = std
+    SD = std
   )
 # Print forecast for 2100
-kable(forecast_2100_table, caption = "CO2 Forecasts in 2100")
+kable(forecast_2100_table, caption = "CO2 Forecasts in 2100")%>%
+  kable_styling(font_size = 9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
+
 
 
 \newpage
