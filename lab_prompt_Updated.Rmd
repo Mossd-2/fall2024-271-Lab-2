@@ -17,6 +17,7 @@ library(forecast)
 library(tseries)
 library(knitr)
 library(fable)
+library(distributional)
 
 
 theme_set(theme_bw())
@@ -47,7 +48,7 @@ co2_tsib <- as_tsibble(co2)
 co2_trend_plot <- co2_tsib %>% 
   ggplot(aes(x = index, y = value)) +
   geom_line(color = 'black', size = .5) +
-  geom_smooth(method = "lm", formula = "y ~ x",se = F, color = 'steelblue', size = .8) +
+  #geom_smooth(method = "lm", formula = "y ~ x",se = F, color = 'steelblue', size = .8) +
   labs(title = 'Increasing CO2 concentration from 1959 to 1997',x = 'Year', y = 'CO2 concentrations (ppmv)') +
   scale_x_yearmonth(date_breaks = "5 years")
 
@@ -171,9 +172,7 @@ co2_trend_plot / co2_curv_trend_plot
 
 ## (3 points) Task 2a: Linear time trend model
 
-Fit a linear time trend model to the `co2` series, and examine the characteristics of the residuals. Compare this to a quadratic time trend model. Discuss whether a logarithmic transformation of the data would be appropriate. Fit a polynomial time trend model that incorporates seasonal dummy variables, and use this model to generate forecasts to the year 2020.
-
-We now fit a linear time trend model the series, and examine the characteristics of the residuals.
+We now fit a linear time trend model the `co2` series, and examine the characteristics of the residuals.
 
 ```{r, echo = FALSE}
 # Fit linear, quadratic, and cubic (3rd-degree polynomial) models at once
@@ -279,7 +278,7 @@ The third-order polynomial model demonstrates improved residual behavior compare
 
 Apart from transforming the orders of the model, we were interested in data transformations - specifically logarithmic. As such we expermiented with a logarithmic dataset to observe the pattern of the data values.
 
-```{r log_transformed, echo = FALSE,fig.align='center', fig.height=4, fig.width=8, out.width="100%"}
+```{r log_transformed, echo = FALSE,fig.align='center', fig.height=3.5, fig.width=7, out.width="100%"}
 # Log transformation
 co2_tsib$log_value <- log(co2_tsib$value)
 
@@ -344,7 +343,7 @@ co2_tsib <- co2_tsib %>%
 ```
 
 
-```{r plot seasonal , echo = FALSE, fig.align='center', fig.height=5, fig.width=11, out.width="100%"}
+```{r plot month , echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%"}
 # Plot time series with poly (3) and month variable
 poly_month_plot <- ggplot(co2_tsib, aes(x = index)) +
   geom_line(aes(y=value), color = 'black', size = .5) +  # Original time series
@@ -372,12 +371,15 @@ poly_season_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = poly_season_mo
   labs(title = "Residuals of Polynomial (3) and Season Variable Model", x = "Year", y = "Residuals")
 
 poly_month_plot | poly_month_residuals_plot
+
+```
+Incorporating the `month` dummy variable brought the residuals closer to zero, ranging between 1 and -1, but they still displayed a seasonal pattern. To refine the model, we grouped the months into quarters, to represent the seasons as a categorical variable, `season`.
+
+```{r plot seasonal,  echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%"}
 poly_season_plot | poly_season_residuals_plot
 ```
-Incorporating the `month` dummy variable brought the residuals closer to zero, ranging between 1 and -1, but they still displayed a seasonal pattern. To refine the model, we grouped the months into quarters, to represent the seasons as a categorical variable,  This adjustment centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We proceeded with this model, considering it the most robust.
-
-Using the polynomial model with the `season` dummy variable, we then developed a forecast for CO2 emissions through 2020.
-```{r forecasting_model, echo = FALSE,fig.align='center', fig.height=6, fig.width=10, out.width="100%"}
+We see that using the `season` variable centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We now proceed with this model, the polynomial model with the `season` dummy variable, as it has the residuals plot that most look like a random distribution around the red linecentered on zero, and developed a forecast for CO2 emissions through 2020.
+```{r forecasting_model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%"}
 # Generate future monthly dates starting from January 1998 to December 2020
 future_index <- seq(from = as.Date("1998-01-01"),  # Start in January 1998
                     to = as.Date("2020-12-01"), by = "1 month")  # Generate monthly dates up to Dec 2020
@@ -410,142 +412,218 @@ forecast_poly_season <- co2_models_x %>%
   forecast(new_data = future_data)  # Use a forecast horizon from the last observed point
 
 autoplot(co2_tsib, value) +  # Plot original data  # Plot original data
-  geom_line(aes(x = index, y = poly_season_model_fitted), color = "blue", size = 1) +  # Add fitted values
-  autolayer(forecast_poly_season, color = "blue") +  # Add forecasted values
+  #geom_line(aes(x = index, y = poly_season_model_fitted), color = "blue", size = 1) +  # Add fitted values
+  autolayer(forecast_poly_season, color = "cornflowerblue") +  # Add forecasted values
   labs(title = "CO2 Levels: Observed (1958-1997) and Forecasted (1998-2020)",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
   guides(colour = guide_legend(title = "Series"))
 ```
-The forecast model using the `season` variable shows very poor performance, with future predictions deviating significantly from expected values, likely due to a misfitting model or improper scaling of the forecasted data. To resolve this, we turn to an ARIMA model, which may better capture the time series' underlying patterns and improve forecast accuracy.
+The forecast model using the `season` variable shows decent performance, and predicts for the upward trend to persist up to 2020, along with the annual seasonality. We will now explore an ARIMA model to see if it may better capture the time series' underlying patterns and improve forecast accuracy.
 
 ## (3 points) Task 3a: ARIMA times series model
 
 Following all appropriate steps, choose an ARIMA model to fit to the series. Discuss the characteristics of your model and how you selected between alternative ARIMA specifications. Use your model (or models) to generate forecasts to the year 2022.
 
-```{r stationarity}
+We first conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in our EDA, we seem to have a clear upward trend, indicating non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively.
+```{r stationarity, echo = FALSE}
 # checking for stationarity
-adf.test(co2_tsib$value)
+# adf.test(co2_tsib$value)
 ```
-With a p-value of 0.2269, the time series data fails to reject the null hypothesis of non-stationarity. As a result, we will proceed with differencing the data to make it stationary, which is a crucial step before fitting the ARIMA model effectively.
 
-```{r arima_differencing, warning=FALSE}
-# First differencing the series to remove trend
-# Added NA to ensure the data has equivalent numbers of rows.
-co2_tsib$diff_value <- c(NA,diff(co2_tsib$value, differences = 1))
+
+```{r arima_differencing, warning=FALSE, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%" }
+# Apply both first-order and seasonal (12th-order) differencing
+co2_tsib <- co2_tsib %>%
+  mutate(diff_value = difference(difference(value, lag = 12),lag=1)) # First-order and seasonal differencing
+
+# Remove leading NAs caused by differencing
+co2_tsib <- co2_tsib %>% filter(!is.na(diff_value))
 
 # Plot the differenced series to check if it looks stationary
-ggplot(co2_tsib, aes(x = index, y = diff_value)) +
+diff_plot <- ggplot(co2_tsib, aes(x = index, y = diff_value)) +
   geom_line() +
-  labs(title = "Differenced CO2 Concentrations", x = "Year", y = "Differenced CO2 concentrations (ppmv)")
+  labs(title = "Differenced CO2 Concentrations", x = "Year", y = "Differenced CO2 concentrations (ppmv)") +
+    scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y")
+
+diff_plot 
 
 # post-check for stationarity
 # remove NA for adf test
-adf.test(na.omit(co2_tsib$diff_value))
+# adf.test(na.omit(co2_tsib$diff_value))
 ```
+The plot of the differenced time series does look more stationary in the mean and variance; which is confirmed by a 0.01 p-value yielded from the Augmented Dickey-Fuller Test, indicating sufficient evidence to reject the null hypothesis of non-stationarity. We now look at the ACF and PACF plots of the differenced time series, to inform how we should construct our ARIMA model. 
+```{r acf_pacf,warning=FALSE,echo=FALSE,fig.align='center',fig.height=4,fig.width=10,out.width="100%"}
+acf_diff <- ACF(co2_tsib, diff_value, lag_max = 24) %>%
+  autoplot() +
+  labs(
+    title = "ACF for Differenced CO2 Concentration",
+    x = "Year",
+    y = "Differenced CO2 Concentrations (ppmv)"
+  )
 
+pacf_diff <- PACF(co2_tsib, diff_value, lag_max = 24) %>%
+  autoplot() +
+  labs(
+    title = "PACF for Differenced CO2 Concentration",
+    x = "Year",
+    y = "Differenced CO2 Concentrations (ppmv)"
+  )
 
-With first differencing successfully making the data stationary, we can now proceed with constructing the ARIMA (p,d,q) model using a d value of 1. The next step will involve fine-tuning the p and q parameters to further optimize the model for accurate forecasting.
+acf_diff | pacf_diff
+```
+Both ACF and PACF plots show strong auto-correlation with lag 1, and the ACF cutting off strong after lag 1, and the PACF having a significant spike at lag 1, and tapering off a little more. This might indicate that our model has a MA(1) component. The spike at lag 12 in the ACF might also indicate a seasonal MA component. 
 
-```{r lags}
-# Fit ARIMA model by testing different lags using the AIC criterion
-model.aic <- co2_tsib %>%
-  model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
-              ic = "aic", stepwise = FALSE))
+```{r model_bic, echo = FALSE, message = FALSE}
+# Fit ARIMA model by testing different lags using the BIC criterion
+model.bic <- co2_tsib %>%
+  model(
+    auto = ARIMA(value, stepwise = FALSE, approx = FALSE, ic = "bic")
+    )
 
-# Report the best model
-model.aic %>%
-  report()
+# Extract the report from the best ARIMA model
+# model.bic %>%
+#   select(auto) %>%
+#   report()
+```
+The ARIMA function behaved as expected, and returned an ARIMA(0,1,1)(0,1,1)$_{12}$ function, with BIC = 182.32. We will now look at the residuals for this model.
 
+```{r residuals, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%", echo = FALSE, warning = FALSE}
 # Extract residuals from the ARIMA model
-residuals_arima <- residuals(model.aic)
+residuals_arima <- residuals(model.bic)
 
 # Plot the residuals over time
 residual_plot <- autoplot(residuals_arima) +
-  labs(title = "Residuals of ARIMA Model", x = "Year", y = "Residuals")
-
-# Display the plot
-residual_plot
+  labs(title = "Residuals of ARIMA(0,1,1)(0,1,1)[12]", x = "Year", y = "Residuals")
 
 # Plot the ACF of the residuals
 acf_plot <- ggAcf(residuals_arima) +
-  labs(title = "ACF of ARIMA Model Residuals", x = "Lag", y = "ACF")
-
-# Display the ACF plot
-print(acf_plot)
+  labs(title = "ACF of ARIMA(0,1,1)(0,1,1)[12] Residuals", x = "Lag", y = "ACF")
 
 # Q-Q plot to check normality of residuals
 qq_plot <- ggplot(data = as.data.frame(residuals_arima), aes(sample = .resid)) +
   stat_qq() +
   stat_qq_line() +
-  labs(title = "Q-Q Plot of ARIMA Model Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles")
+  labs(title = "Q-Q Plot of ARIMA(0,1,1)(0,1,1)[12] Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles")
 
-# Display the Q-Q plot
-print(qq_plot)
+residual_plot|acf_plot |qq_plot
 
+
+```
+
+```{r ljung box test on residuals, echo = FALSE}
 # Ljung Box Test on residuals
-# Calculate the number of observations
-N <- nrow(co2_tsib)
-
-# Determine the number of lags (using rule of thumb: sqrt(N))
-lags <- floor(sqrt(N))
-
-# get residuals
-resid.ts<-model.aic %>%
+resid.ts<-model.bic %>%
   augment() %>%
   select(.resid) %>%
   as.ts()
-
-Box.test(resid.ts, lag = lags, type = "Ljung-Box")
-
-# # Fit ARIMA model by testing different lags using the AICc criterion
-# model.aicc <- co2_tsib %>%
-#   model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
-#               ic = "aicc", stepwise = FALSE))
-# 
-# # Report the best model
-# model.aicc %>%
-#   report()
-# 
-# # Fit ARIMA model by testing different lags using the BIC criterion
-# model.bic <- co2_tsib %>%
-#   model(ARIMA(value ~ 1 + pdq(0:10, 1, 0:10) + PDQ(0:2, 0, 0:2), 
-#               ic = "bic", stepwise = FALSE))
-# 
-# # Report the best model
-# model.bic %>%
-#   report()
-
+# Box.test(resid.ts, lag = 24, type = "Ljung-Box")
 ```
-The AIC analysis identified the optimal ARIMA model parameters as p=3, d=1, and q=1. The residuals are centered around zero with random fluctuations, indicating the model has captured most of the underlying structure. However, the ACF plot shows significant spikes at lags 10 and 24, indicating some remaining autocorrelation, and the Ljung-Box test confirms this with a p-value of < 2.2e-16, suggesting the need for additional terms to improve the model fit. Despite this, the QQ plot indicates that the residuals follow normality well. With these considerations, we can proceed with forecasting the time series data through 2022.
+The residuals look random, there are no significant autocorrelations in the ACF, and they closely follow a a normal distribution in the Q-Q plot. These all indicate that the model has captured most of the underlying structure of our time series. A Ljung-Box test also yielded a p-value of 0.6733, further confirming that there is insufficient statistical evidence to reject the null hypothesis that there is no autocorrelation. We can proceed with forecasting the time series data through 2022.
 
-```{r arima_forecasting}
-# Determine how many months to forecast (from the last observation to Dec 2022)
-last_observation <- max(co2_tsib$index)
-end_of_2022 <- as.Date("2022-12-31")
+```{r arima_forecasting, fig.align='center',fig.height=4.5,fig.width=10,out.width="100%", echo = FALSE, warning= FALSE}
 
-# Calculate the number of months to forecast
-horizon <- as.numeric(
-  difftime(end_of_2022, last_observation, units = "weeks")) / 4.34524  # Convert weeks to months
+# Generate forecasts from model.bic
+forecast_arima <- model.bic %>%
+  forecast(h = "25 years")  # Forecast horizon up to 2022
 
-# Forecast using the ARIMA model until 2022
-forecast_arima <- model.aic %>%
-  forecast(h = round(horizon))  # Use calculated horizon
-
-# Plot the forecast
-forecast_plot <- forecast_arima %>%
-  autoplot(co2_tsib) +
-  labs(title = "ARIMA Model Forecast of CO2 Concentrations to 2022", 
-       x = "Year", y = "CO2 Concentrations (ppmv)")
-
-# Show the plot
-print(forecast_plot)
+# Plot the forecasts along with the observed data
+autoplot(co2_tsib, value) +  # Plot original data
+  autolayer(forecast_arima, color = "cornflowerblue") +  # Add forecast 
+  labs(title = "CO2 Levels: Observed and Forecasted (up to 2022)",
+       x = "Year", y = "CO2 concentrations (ppmv)") +
+  scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
+  guides(colour = guide_legend(title = "Series"))
 ```
 
 ## (3 points) Task 4a: Forecast atmospheric CO2 growth
 
-Generate predictions for when atmospheric CO2 is expected to be at [420 ppm](https://research.noaa.gov/article/ArtMID/587/ArticleID/2764/Coronavirus-response-barely-slows-rising-carbon-dioxide) and 500 ppm levels for the first and final times (consider prediction intervals as well as point estimates in your answer). Generate a prediction for atmospheric CO2 levels in the year 2100. How confident are you that these will be accurate predictions?
 
+```{r long term forecast part one, echo = FALSE}
+# Generate forecasts for a long horizon (up to 2100)
+long_term_forecast <- model.bic %>%
+  forecast(h = "103 years")  # Forecast horizon (assuming we want predictions up to 2100)
+
+# Convert the forecast to a data frame for easier inspection
+forecast_df <- as.data.frame(long_term_forecast)
+
+# Look at when CO2 levels are predicted to reach 420 ppm
+threshold_420 <- forecast_df %>%
+  filter(.mean >= 420 & .mean < 421)
+
+# Extract the mean and variance from threshold_420
+mean_420 <- threshold_420$.mean  # Mean value
+variance_420 <- variance(threshold_420$value)  # Extract variance from the distribution
+
+# Calculate standard deviation
+sd_420 <- sqrt(variance_420)
+
+# Calculate the 80% confidence interval
+ci_lower_420 <- mean_420 - 1.28 * sd_420
+ci_upper_420 <- mean_420 + 1.28 * sd_420
+
+# Look at when CO2 levels are predicted to reach 500 ppm
+threshold_500 <- forecast_df %>%
+  filter(.mean >= 500 & .mean < 501)
+
+# Extract the mean and variance from threshold_420
+mean_500 <- threshold_500$.mean  # Mean value
+variance_500 <- variance(threshold_500$value)  # Extract variance from the distribution
+
+# Calculate standard deviation
+sd_500 <- sqrt(variance_500)
+
+# Calculate the 80% confidence interval
+ci_lower_500 <- mean_500 - 1.28 * sd_500
+ci_upper_500 <- mean_500 + 1.28 * sd_500
+
+# Looking at confidence intervals for first and last time 420 level is reached
+# c(ci_lower_420[1],  ci_upper_420[1])
+# c(ci_lower_420[length(ci_lower_420)], ci_upper_420[length(ci_upper_420)])
+
+# Looking at confidence intervals for first and last time 500 level is reached
+# c(ci_lower_500[1],  ci_upper_500[1])
+# c(ci_lower_500[length(ci_lower_500)], ci_upper_500[length(ci_upper_500)])
+
+
+```
+
+We now forecast when atmospheric CO2 is expected to be at 420 ppm and 500 ppm for the first and final times, as seen in the table below. 
+```{r forecast 420 500, echo = FALSE}
+# Create a data frame with blanks
+co2_table <- data.frame(
+  "CO2 Level" = c("420 ppm", "500 ppm"),  # CO2 levels to track
+  `First Month` = c("2031 May", "2083 Apr"),      # Placeholder for month first reached
+  `First Value` = c("420.1 (402.3, 438.0)", "500.4 (437.9,562.9)"),       # Placeholder for confidence interval
+  `Last Month` = c("2035 Oct", "2085 Dec"),       # Placeholder for month last reached
+  `Last Value` = c("420.4 (399.5, 441.3)", "500.9 (435.7,566.2)")       # Placeholder for confidence interval
+)
+
+# Print the table using kable
+kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80% Confidence Intervals")
+```
+
+Our model also forecasts CO2 levels in the year 2100. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as **insert efforts here**. Thus, since these are very human-activty dependent, it is unlikely to be super accurate.
+
+```{r forecast 2100, echo = FALSE, message = FALSE}
+# Extract the forecast for the year 2100
+forecast_2100 <- forecast_df %>%
+  filter(year(index) == 2100)
+
+# Create variance column
+forecast_2100$std <- sqrt(variance(forecast_2100$value))
+forecast_2100_table<-forecast_2100 %>%select("index",".mean","std") %>%
+  mutate(.mean = round(.mean,1), std = round(std,1)) %>%
+  rename(
+    Date =index,
+    Value = .mean,
+    Standard_Deviation = std
+  )
+# Print forecast for 2100
+kable(forecast_2100_table, caption = "CO2 Forecasts in 2100")
+```
+
+\newpage
 # Report from the Point of View of the Present
 
 One of the very interesting features of Keeling and colleagues' research is that they were able to evaluate, and re-evaluate the data as new series of measurements were released. This permitted the evaluation of previous models' performance and a much more difficult question: If their models' predictions were "off" was this the result of a failure of the model, or a change in the system?
