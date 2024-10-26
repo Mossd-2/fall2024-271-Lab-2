@@ -760,7 +760,7 @@ new_yearly_ave_w_residuals_plot <- new_yearly_ave_w_residuals %>%
 yearly_ave_w_residuals_plot
 
 ```
-
+The new data collection method and techniques yield similar trends in average CO2 levels across months and years, with no notable deviations from prior patterns. Additionally, the residuals display consistent patterns, indicating that the updated methods align closely with previous data quality and trend behavior. The only detected change was the results of the adf test which found the CO2 values to be stationary.
 
 ## (1 point) Task 2b: Compare linear model forecasts against realized CO2
 
