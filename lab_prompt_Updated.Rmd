@@ -751,13 +751,13 @@ new_yearly_ave_w_residuals <- new_co2_tsib %>% as_tibble() %>%
 
 
 new_yearly_ave_w_residuals_plot <- new_yearly_ave_w_residuals %>% 
-  ggplot(aes(x = index, y = `Yearly_Co2`, color = type)) +
+  ggplot(aes(x = index, y = `Yearly Co2`, color = type)) +
   geom_line() +
   facet_wrap(~residual_bool, scales = "free_y", ncol = 1) +
   xlab('Date') +
   theme(legend.position = "none")
 
-yearly_ave_w_residuals_plot
+new_yearly_ave_w_residuals_plot
 
 ```
 The new data collection method and techniques yield similar trends in average CO2 levels across months and years, with no notable deviations from prior patterns. Additionally, the residuals display consistent patterns, indicating that the updated methods align closely with previous data quality and trend behavior. The only detected change was the results of the adf test which found the CO2 values to be stationary.
@@ -766,15 +766,112 @@ The new data collection method and techniques yield similar trends in average CO
 
 Descriptively compare realized atmospheric CO2 levels to those predicted by your forecast from a linear time model in 1997 (i.e. "Task 2a"). (You do not need to run any formal tests for this task.)
 
+
+```{r comparing_to_forecast, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%"}
+
+# forecasted data on actual data
+new_co2_tsib %>% 
+  index_by(month = yearmonth(datetime)) %>% 
+  summarize(value = mean(value, na.rm = T)) %>% 
+  left_join(forecast_poly_season, by = c('month' = 'index')) %>% 
+  rename(forecast = .mean, observed = value.x) %>% 
+  pivot_longer(cols = c(observed, forecast), names_to = 'type', values_to = 'value') %>% 
+  ggplot(aes(x = month, y = value, colour = type)) +
+  geom_line() +
+  ylab('Co2 Concentrations (ppmv)') +
+  ggtitle('Forecasted Co2 Concentrations Compared to Observed Values', subtitle = 'Using a Polynomial and Seasonality Forecasting Model')
+  
+
+
+
+```
+When plotting the observed Co2 concentrations to the forecasted values from data up to 1997, we see a clear mismatch in predictions. The model had predicted a declining trend of Co2 concentrations, but actual concentrations increased fairly linearly. The declining trend was modeled with an expected curvilinear relationship with Co2 concentrations over time, as this fit better when looking at the time period between the 1950s and 1990s. But the actual time series may not be appropriately measured as a strict polynomial relationship, possibly depending on external causes such as human-lead efforts to reduce carbon emissions or efforts to restrict policy against reducing carbon emissions.
+
 ## (1 point) Task 3b: Compare ARIMA models forecasts against realized CO2
 
 Descriptively compare realized atmospheric CO2 levels to those predicted by your forecast from the ARIMA model that you fitted in 1997 (i.e. "Task 3a"). Describe how the Keeling Curve evolved from 1997 to the present.
+
+
+```{r comparing_to_arima, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%"}
+
+
+new_co2_tsib %>% 
+  index_by(month = yearmonth(datetime)) %>% 
+  summarize(value = mean(value, na.rm = T)) %>% 
+  left_join(forecast_arima, by = c('month' = 'index')) %>% 
+  rename(forecast = .mean, observed = value.x) %>% 
+  pivot_longer(cols = c(observed, forecast), names_to = 'type', values_to = 'value') %>% 
+  ggplot(aes(x = month, y = value, colour = type)) +
+  geom_line() +
+  ylab('Co2 Concentrations (ppmv)') +
+  ggtitle('Forecasted Co2 Concentrations Compared to Observed Values', subtitle = "Using an ARIMA Forecasting Model")
+  
+  
+```
+
+The ARIMA model, while closer in trend to the observed values than the curvilinear model, still underestimates the increases in global Co2 concentrations. The yearly fluctuations match better than the previous forecast and in the short-term the forecast performs well, but within 5 years the forecast diverges from actual concentrations and by 2020 we see concentrations of ~12.5 Co2 ppmv higher than anticipated.
+
+
 
 ## (3 points) Task 4b: Evaluate the performance of 1997 linear and ARIMA models
 
 In 1997 you made predictions about the first time that CO2 would cross 420 ppm. How close were your models to the truth?
 
+Before, we expected that we would reach 420 ppmv around May of 2031, but the first date we past this threshold was in March of 2022. In other words, our predictions were nearly a decade off courses. This may imply a more concerning trajectory for negative environmental outcomes than previously anticipated
+
+
+
+
 After reflecting on your performance on this threshold-prediction task, continue to use the weekly data to generate a month-average series from 1997 to the present, and compare the overall forecasting performance of your models from Parts 2a and 3b over the entire period. (You should conduct formal tests for this task.)
+
+
+```{r comparing_forecasting_performance, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%"}
+
+
+# getting root mean absolute error and root mean squared errors to compare models
+
+# getting actual values
+actual_values <- new_co2_tsib %>% 
+  index_by(month = yearmonth(datetime)) %>% 
+  summarise(value = mean(value, na.rm = T)) %>% 
+  filter(month >= yearmonth('1998 Jan') & month <= yearmonth('2020 Dec')) %>% 
+  pull(value)
+
+# poly forecasted values
+poly_forecast_values <- forecast_poly_season %>% pull(.mean)
+  
+#arima forecasted values
+arima_forecast_values <- forecast_arima %>% 
+  filter(index <= yearmonth('2020 Dec')) %>% 
+  pull(.mean)
+
+
+# Mean Absolute Error (MAE)
+mae_poly <- mean(abs(actual_values - poly_forecast_values)) # ~ 12.3
+mae_arima <- mean(abs(actual_values - arima_forecast_values)) # ~ 5.8
+
+# Root Mean Squared Error (RMSE)
+rmse_poly <- sqrt(mean((actual_values - poly_forecast_values)^2)) # ~ 15.3
+rmse_arima <- sqrt(mean((actual_values - arima_forecast_values)^2)) # ~ 7.1
+
+
+# arima appears to be the better performing model
+
+
+
+# satistically comparing performance using the Diebold-Mariano test
+
+# Calculate forecast errors
+errors_poly <- actual_values - poly_forecast_values
+errors_arima <- actual_values - arima_forecast_values
+
+# Perform Diebold-Mariano test
+dm.test(errors_poly, errors_arima, alternative = "two.sided", h = 1, power = 2)
+# p-value less than .05, may reject the null hypothesis that the two errors are equal
+
+```
+We compare the Mean Absolute Error and Root Mean Squared Error of each forecasting model, and conduct a significance test to formally compare the differences. We see that the polynomial season model has an MAE of ~ 12.3, while the ARIMA model has lower MAE of ~ 5.8. Similarly, we see that the polynomial season model has a higher RMSE of ~ 15.3, while the ARIMA model has lower RMSE of ~ 7.1. The lower errors suggest that the ARIMA model is a better fitting forecasting model. Finally, the conducted Diebold-Mariano Test, which tests for differences in forecast errors, returns a significant p-value, allowing us to reject the null hypothesis that the two forecasts are not equivalent.
+
 
 ## (4 points) Task 5b: Train best models on present data
 
