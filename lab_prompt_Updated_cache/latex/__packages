@@ -18,3 +18,5 @@ tseries
 knitr
 fable
 distributional
+kableExtra
+imputeTS
