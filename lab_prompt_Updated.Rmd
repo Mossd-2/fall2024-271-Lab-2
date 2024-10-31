@@ -387,7 +387,7 @@ forecast_poly_season <- co2_models_x %>%
 
 autoplot(co2_tsib, value) +  # Plot original data  # Plot original data
   #geom_line(aes(x = index, y = poly_season_model_fitted), color = "blue", size = 1) +  # Add fitted values
-  autolayer(forecast_poly_season, color = "cornflowerblue") +  # Add forecasted values
+  autolayer(forecast_poly_season, color = "blue2") +  # Add forecasted values
   labs(title = "CO2 Levels: Observed (1958-1997) and Forecasted (1998-2020)",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
@@ -500,7 +500,7 @@ forecast_arima <- model.bic %>%
 
 # Plot the forecasts along with the observed data
 autoplot(co2_tsib, value) +  # Plot original data
-  autolayer(forecast_arima, color = "cornflowerblue") +  # Add forecast 
+  autolayer(forecast_arima, color = "blue2") +  # Add forecast 
   labs(title = "CO2 Levels: Observed and Forecasted (up to 2022)",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
@@ -692,13 +692,14 @@ new_co2_trend_plot / new_change_hist
 ```
 From 1998 to 2024, the time series continues to show a clear upward trend of global CO2 concentrations, with an average increase in 1.90 CO2 ppmv and a standard deviation of .61 CO2 ppmv. These are larger values than those calculated in 1997, indicating that the time series had a larger average increase and standard deviation from 1998 to present day 2024. The histogram also shows a rightward shift in the distribution, indicating that the annual changes have increased.
 
-We now look at the ACF plot and average CO2 concentration for each month to gain further clarity on the seasonality.
+We now look at the ACF plot and weekly CO2 concentration across every year to gain further clarity on the seasonality.
+\newpage
 
-```{r seasonality-eda-two, echo = FALSE,fig.align='center', fig.height=4, fig.width=11, out.width="100%",fig.cap = "Observing seasonality in CO2 concentration"}
+```{r seasonality-eda-two, echo = FALSE,fig.align='center', fig.height=4, fig.width=11, out.width="100%",fig.cap = "Observing seasonality in CO2 concentration",warning = FALSE}
 # inspecting acf and graph of co2 concentrations over time
 new_co2_acf <- acf(new_co2_tsib$value, plot = F)
 new_co2_acf_plot <-  autoplot(new_co2_acf) + 
-  labs(title = "ACF plot of monthly CO2 Concentrations 1997-Present", x = 'Lag', y = 'Autocorrelation')
+  labs(title = "ACF plot of monthly CO2 Concentrations", x = 'Lag', y = 'Autocorrelation',subtitle="1997-Sep 2024")
 
 # Monthly aggregated dataset
 new_co2_monthly_averages <- data_clean %>%
@@ -708,22 +709,37 @@ new_co2_monthly_averages <- data_clean %>%
   ungroup() %>%
   as_tsibble(index = month)  # Convert to tsibble
 
-# make a monthly average co2 plot
-new_monthly_co2_ave_plot <- new_co2_monthly_averages %>%
-  mutate(month_str = factor(month.abb[month], levels = month.abb)) %>% 
-  ungroup() %>% 
-  ggplot(aes(x = month_str, y = co2_monthly_ave, group = 1)) +
-  geom_line(size = .8, color = 'purple4') +
-  geom_point(size = 1.5) +
-  ggtitle("Average CO2 Concentrations Across\nEach Month") +
-  xlab('Month') +
-  ylab('Co2 Concentrations (ppmv)') +
-  theme(axis.text.x = element_text(angle = 45))
+# # make a monthly average co2 plot
+# new_monthly_co2_ave_plot <- new_co2_monthly_averages %>%
+#   mutate(month_str = factor(month.abb[month], levels = month.abb)) %>% 
+#   ungroup() %>% 
+#   ggplot(aes(x = month_str, y = co2_monthly_ave, group = 1)) +
+#   geom_line(size = .8, color = 'purple4') +
+#   geom_point(size = 1.5) +
+#   ggtitle("Average CO2 Concentrations Across\nEach Month") +
+#   xlab('Month') +
+#   ylab('Co2 Concentrations (ppmv)') +
+#   theme(axis.text.x = element_text(angle = 45))
 
-new_co2_acf_plot | new_monthly_co2_ave_plot
+
+
+# Convert your data to a tsibble (if not already in tsibble format)
+data_tsibble <- as_tsibble(data_clean, index = datetime)
+data_tsibble <- data_tsibble %>%
+  fill_gaps()
+
+# Use gg_season to plot seasonality
+gg_season_plot <- gg_season(data_tsibble, value) +
+  labs(
+    title = "Seasonal Plot of Weekly CO2 Concentrations",
+    x = "Week of the Year",
+    y = "CO2 Concentrations (ppmv)"
+  )
+
+new_co2_acf_plot | gg_season_plot
 ```
 
-We see strong persistent autocorrelation for many lags, indicating an overall trend. The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons when we inspect the monthly average the CO2 ppmv, when averaged across all years in the available data. CO2 concentration peaks at the start of summer, and drops to a low in the fall, before rising again. These observations are consistent with the report from 1997.
+We see strong persistent autocorrelation for many lags, indicating an overall trend. The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons: CO2 concentration peaks at the start of summer, and drops to a low in the fall, before rising again. These observations are consistent with the report from 1997.
 
 We now study the time series' stationarity. We conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. However, this is *contrasted* by a p-value of 0.01 yielded by the test, which indicates evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
 
@@ -755,6 +771,7 @@ new_yearly_ave_w_residuals_plot
 ```
 The new data collection method and techniques yield similar trends in average CO2 levels across months and years, with no notable deviations from prior patterns. Additionally, the residuals display consistent patterns, indicating that the updated methods align closely with previous data quality and trend behavior. The only detected change was the results of the adf test which found the CO2 values to be stationary.
 
+\newpage
 ## (1 point) Task 2b: Compare linear model forecasts against realized CO2
 
 ```{r comparing-to-forecast, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%", fig.cap = "Forecasted with a Polynomial (3) with Season Variable Model"}
@@ -792,7 +809,7 @@ forecast_poly_season <- co2_models_x %>%
 
 
 autoplot(new_co2_tsib, value) +  # Plot original data  # Plot original data
-  autolayer(forecast_poly_season, color = "cornflowerblue") +  # Add forecasted values
+  autolayer(forecast_poly_season, color = "blue2") +  # Add forecasted values
   labs(title = "Forecasted CO2 Concentrations Compared to Observed Values",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
@@ -810,7 +827,7 @@ When plotting the observed Co2 concentrations to the forecasted values from data
 forecast_arima <- model.bic %>%
   forecast(new_data = future_data)  # Forecast horizon up to 2024
 
-autoplot(forecast_arima, color = "cornflowerblue") +  # Add forecast first
+autoplot(forecast_arima, color = "blue2") +  # Add forecast first
   autolayer(new_co2_tsib, value, color = "black") +  # Plot observed data on top
   labs(title = "Forecasted CO2 Concentrations Compared to Observed Values",
        x = "Year", y = "CO2 concentrations (ppmv)") +
@@ -903,6 +920,7 @@ stl_plot <- autoplot(stl_components) +
 stl_plot
 
 ```
+
 ```{r splitting train test set, echo = FALSE}
 # Convert datetime to yearweek format
 stl_components <- stl_components %>%
@@ -940,32 +958,32 @@ test_NSA <- new_co2_tsib_impute %>%
   filter(datetime >= test_start_date & datetime <= test_end_date) 
 ```
 
-We now look at the ACFs and PACFs of the SA and NSA training data, and consider what ARIMA models we can fit to it. 
+We now look at the ACFs and PACFs of the SA and NSA training data, with a difference of 1 to account of the overall trend, to consider what ARIMA models we can fit to it. 
 
 \newpage
 
 ```{r acf-and-pacfs, echo = FALSE, fig.align='center', fig.height=5, fig.width=10, out.width="100%", fig.cap = "EDA on training and test sets"}
 # Compute the ACF plot for NSA data
-train_NSA_acf <- ACF(train_NSA, value, lag_max = 104) %>% autoplot()+ 
-  labs(title = "ACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set: 1997 Jan - 2022 Sep", x = 'Lag', y = 'Autocorrelation')
+train_NSA_acf <- ACF(train_NSA, difference(value,lag = 1), lag_max = 104) %>% autoplot()+ 
+  labs(title = "ACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st order", x = 'Lag', y = 'Autocorrelation')
 
 # Compute the PACF plot for NSA data
-train_NSA_pacf <- PACF(train_NSA, value, lag_max = 104) %>% autoplot()+ 
-  labs(title = "PACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set: 1997 Jan - 2022 Sep", 
+train_NSA_pacf <- PACF(train_NSA, difference(value,lag=1), lag_max = 104) %>% autoplot()+ 
+  labs(title = "PACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st order", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 
 # Compute the ACF plot for SA data
-train_SA_acf <- ACF(train_SA, trend, lag_max = 104) %>%
+train_SA_acf <- ACF(train_SA, difference(trend,lag=1), lag_max = 104) %>%
   autoplot() + 
-  labs(title = "ACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set: 1997 Jan - 2022 Sep", 
+  labs(title = "ACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st order", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 
 # Compute the PACF plot for SA data
-train_SA_pacf <- PACF(train_SA, trend, lag_max = 104) %>%
+train_SA_pacf <- PACF(train_SA, difference(trend,lag=1), lag_max = 104) %>%
   autoplot() + 
-  labs(title = "PACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set: 1997 Jan - 2022 Sep", 
+  labs(title = "PACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st order", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 # Display the plots
@@ -973,22 +991,22 @@ train_SA_pacf <- PACF(train_SA, trend, lag_max = 104) %>%
 
 ```
 
-We note that the NSA data has persistent autocorrelation in the ACF up to 104 (2 years) lags, and an autocorrelation of 1 for the PACF's first lag. This indicates that there should be non-seasonal differencing of 1. The PACF also indicates yearly seasonality, indicating seasonal differencing of 1. Given a tapering ACF and a sharply dropping PACF, we could try a ARIMA(1,1,0)(0,1,0). We will also let the `ARIMA` function choose a model for us.
+We note that the NSA ACF shows clear seasonality, indicating that should include a seasonal difference. The NSA PACF also shows significant autocorrelation up to the first 13 lags. Given that both ACFs and PACFs have some tapering off and show clear seasonality, we should try both an AR and MA model with a seasonal difference and seasonal AR and MA components, perhaps ARIMA(1,1,1)(1,1,1). We will also let the `ARIMA` function choose a model for us.
 
-For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will try a ARIMA(1,1,0), ARIMA(1,1,1), and ARIMA(2,1,0). We get the tables below
+For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will try a ARIMA(1,1,0), ARIMA(1,1,1), and ARIMA(2,1,0). We get the tables below.
 
 ```{r training models, echo = FALSE, cache = TRUE}
 # NSA
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic.present.nsa <- train_NSA %>%
   model(
-    arima110010 = ARIMA(value ~ pdq(1,1,0) + PDQ(0,1,0)),
+    arima111011 = ARIMA(value ~ 0 + pdq(1,1,1) + PDQ(0,1,1)),
     auto = ARIMA(value, stepwise = FALSE, ic = "bic")
     )
 
 # Extract the glances
-nsa.arima110010.report <- model.bic.present.nsa %>%
-  select(arima110010) %>%
+nsa.arima111011.report <- model.bic.present.nsa %>%
+  select(arima111011) %>%
   glance()
 
 nsa.auto.report <- model.bic.present.nsa %>%
@@ -1023,10 +1041,10 @@ sa.arima210000.report <- model.bic.present.sa %>%
 
 # NSA: Create a data frame for NSA models
 nsa_table <- data.frame(
-  Model = c("ARIMA(1,1,0)(0,1,0)", "Auto: ARIMA(0,1,3)(2,1,0)"),
-  AICc = c(nsa.arima110010.report$AICc, nsa.auto.report$AICc),
-  BIC = c(nsa.arima110010.report$BIC, nsa.auto.report$BIC),
-  LogLik = c(nsa.arima110010.report$log_lik, nsa.auto.report$log_lik)
+  Model = c("ARIMA(1,1,1)(0,1,1)", "Auto: ARIMA(0,1,3)(2,1,0)"),
+  AICc = c(nsa.arima111011.report$AICc, nsa.auto.report$AICc),
+  BIC = c(nsa.arima111011.report$BIC, nsa.auto.report$BIC),
+  LogLik = c(nsa.arima111011.report$log_lik, nsa.auto.report$log_lik)
 )
 
 # SA: Create a data frame for SA models
@@ -1050,7 +1068,7 @@ kable(sa_table, caption = "SA ARIMA Model Results")%>%
   kable_styling(font_size = 9,latex_options = "HOLD_position") 
 ```
 
-For the NSA data, we will pick the model that the ARIMA function picked for us, ARIMA(0,1,3)(2,1,0), as it clearly outperforms the model we tried in both AICc and BIC. For SA data, all models are almost par; we will thus choose the parsimonious model of ARIMA(1,1,0). We now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models.
+For the NSA data, we will pick the model that has the lowest IC values, ARIMA(1,1,1)(0,1,1), as it clearly outperforms the model picked by the `ARIMA` function.For SA data, all models are almost par; we will thus choose the parsimonious model of ARIMA(1,1,0). We now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models.
 
 \newpage
 
@@ -1059,27 +1077,27 @@ For the NSA data, we will pick the model that the ARIMA function picked for us, 
 
 # Extract fitted values for the NSA ARIMA model
 nsa_fitted <- model.bic.present.nsa %>%
-  select(arima110010) %>%
+  select(arima111011) %>%
   fitted()
 
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
-  select(arima110010) %>%
+  select(arima111011) %>%
   forecast(new_data = test_NSA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
-nsa_forecast_plot<-autoplot(nsa_fitted,.fitted, color = "cornflowerblue") +  # Fitted values for training data
+nsa_forecast_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted values for training data
   autolayer(train_NSA, value, color = "black") +  # Actual values for training data
-  autolayer(nsa_forecast, color = "cornflowerblue") +  # Forecast for test data
+  autolayer(nsa_forecast, color = "blue2") +  # Forecast for test data
   autolayer(test_NSA, value, color = "black") +  # Actual values for test data
-  labs(title = "NSA: Assessing ARIMA(0,1,3)(2,1,0)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
+  labs(title = "NSA: Assessing ARIMA(1,1,1)(0,1,1)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
   coord_cartesian(xlim = c(as.Date("2020-01-01"), NA), ylim=c(375,450)) # Limit to data from 2020 onwards
 
-nsa_full_plot<-autoplot(nsa_fitted,.fitted, color = "cornflowerblue") +  # Fitted values for training data
+nsa_full_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted values for training data
   autolayer(train_NSA, value, color = "black",alpha = 0.8) +  # Actual values for training data
-  autolayer(nsa_forecast, color = "cornflowerblue") +  # Forecast for test data
+  autolayer(nsa_forecast, color = "blue2") +  # Forecast for test data
   autolayer(test_NSA, value, color = "black") +  # Actual values for test data
-  labs(title = "NSA: Comparing ARIMA(0,1,3)(2,1,0)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
+  labs(title = "NSA: Comparing ARIMA(1,1,1)(0,1,1)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
 
 # Extract fitted values for the SA ARIMA model
 sa_fitted <- model.bic.present.sa %>%
@@ -1092,17 +1110,17 @@ sa_forecast <- model.bic.present.sa %>%
   forecast(new_data = test_SA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
-sa_forecast_plot<-autoplot(sa_fitted,.fitted,color = "cornflowerblue") +  # Fitted values for training data
+sa_forecast_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for training data
   autolayer(train_SA, trend, color = "black") +  # Actual values for training data
-  autolayer(sa_forecast,color = "cornflowerblue") +  # Forecast for test data
+  autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
   autolayer(test_SA, trend, color = "black") +  # Actual values for test data
   labs(title = "SA: Assessing ARIMA(1,1,0)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
   coord_cartesian(xlim = c(as.Date("2020-01-01"), NA), ylim=c(375,450))  # Limit to data from 2020 onwards
 
 # Plot the fitted values for training, forecast for test data, and actual data
-sa_full_plot<-autoplot(sa_fitted,.fitted,color = "cornflowerblue") +  # Fitted values for training data
+sa_full_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for training data
   autolayer(train_SA, trend, color = "black", alpha = 0.8) +  # Actual values for training data
-  autolayer(sa_forecast,color = "cornflowerblue") +  # Forecast for test data
+  autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
   autolayer(test_SA, trend, color = "black") +  # Actual values for test data
   labs(title = "SA: Comparing ARIMA(1,1,0)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
   
@@ -1111,7 +1129,7 @@ sa_full_plot<-autoplot(sa_fitted,.fitted,color = "cornflowerblue") +  # Fitted v
 ( sa_forecast_plot| nsa_forecast_plot)
 
 ```
-We can see that our models' fitted values in blue are extremely close to the actual values plotted in orange in the top two plots. For the forecasts, both models 95% confidence intervals in blue included the actual data in orange. However, the NSA model seemed to provide a closer fit to the actual data. We now compare both the RMSE and MAE of both models.
+We can see that our models' fitted values in blue are extremely close to the actual values plotted in black in the top two plots. For the forecasts, both models 95% confidence intervals in blue included the actual data in black However, the NSA model seemed to provide a closer fit to the actual data. We now compare both the RMSE and MAE of both models.
 
 ```{r MSE and MAE for final models, echo = FALSE}
 # NSA: Calculate MSE and MAE for training set (fitted values)
@@ -1172,7 +1190,7 @@ kable(model_comparison, caption = "Comparison of NSA and SA Models on Training a
   kable_styling(font_size = 9,latex_options = "HOLD_position") 
 ```
 
-As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set. We now fit a polynomial time-trend model for the SA series and compare it with that of our ARIMA model.
+As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set, indicating that the NSA model of ARIMA(1,1,1)(0,1,1) generalizes better. Given that our SA ARIMA model can be improved, we now fit a polynomial time-trend model for the SA series and compare it with the SA ARIMA model.
 
 \newpage
 
@@ -1190,8 +1208,8 @@ forecast_SA_poly <- SA_poly_model %>%
   forecast(new_data = test_SA)  # Use a forecast horizon from the last observed point
 
 SA_poly_full_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot original data
-  autolayer(fitted_SA_poly, .fitted, color = "cornflowerblue")+
-  autolayer(forecast_SA_poly, color = "cornflowerblue") +  # Add forecasted values
+  autolayer(fitted_SA_poly, .fitted, color = "blue2")+
+  autolayer(forecast_SA_poly, color = "blue2") +  # Add forecasted values
   autolayer(test_SA, trend)+
   labs(title = "Polynomial (3) Model Fit on SA Training Set",
        x = "Year", y = "CO2 concentrations (ppmv)") +
@@ -1200,8 +1218,8 @@ SA_poly_full_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot o
 
 
 SA_poly_forecast_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot original data
-  autolayer(fitted_SA_poly, .fitted, color = "cornflowerblue")+
-  autolayer(forecast_SA_poly, color = "cornflowerblue") +  # Add forecasted values
+  autolayer(fitted_SA_poly, .fitted, color = "blue2")+
+  autolayer(forecast_SA_poly, color = "blue2") +  # Add forecasted values
   autolayer(test_SA, trend)+
   labs(title = "Assessing Polynomial (3) Model on SA Test Set",
        x = "Year", y = "CO2 concentrations (ppmv)") +
