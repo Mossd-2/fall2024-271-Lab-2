@@ -7,7 +7,7 @@ output:
     number_sections: true
 ---
 
-```{r load packages, echo = FALSE, message = FALSE}
+```{r load packages, echo = FALSE, message = FALSE, warning=FALSE}
 library(tidyverse)
 library(tsibble)
 library(latex2exp)
@@ -23,6 +23,22 @@ library(kableExtra)
 #install.packages("imputeTS")
 library(imputeTS)
 
+
+# # Define a function to install and load a package if not already installed
+# install_if_missing <- function(pkg) {
+#   if (!requireNamespace(pkg, quietly = TRUE)) {
+#     install.packages(pkg)
+#   }
+#   library(pkg, character.only = TRUE)
+# }
+# 
+# # List of required packages
+# packages <- c("tidyverse", "tsibble", "latex2exp", "feasts", "patchwork", 
+#               "forecast", "tseries", "knitr", "fable", "distributional", 
+#               "kableExtra", "imputeTS")
+# 
+# # Install and load each package
+# invisible(lapply(packages, install_if_missing)) # hide the output
 
 theme_set(theme_bw())
 # theme_set(theme_minimal())
@@ -381,9 +397,8 @@ future_data$season <- factor(future_data$season, levels = c("Winter", "Spring", 
 future_data<- future_data %>%
   as_tsibble(index = index)
 
-forecast_poly_season <- co2_models_x %>%
-  select(poly_season_model) %>%
-  forecast(new_data = future_data)  # Use a forecast horizon from the last observed point
+forecast_poly_season <- forecast(co2_models_x$poly_season_model[[1]],
+  new_data = future_data)  # Use a forecast horizon from the last observed point
 
 autoplot(co2_tsib, value) +  # Plot original data  # Plot original data
   #geom_line(aes(x = index, y = poly_season_model_fitted), color = "blue", size = 1) +  # Add fitted values
@@ -485,8 +500,9 @@ residual_plot|acf_plot |qq_plot
 # Ljung Box Test on residuals
 resid.ts<-model.bic %>%
   augment() %>%
-  select(.resid) %>%
+  dplyr::select(.resid) %>%    # dplyr makes sure this doesn't bug out
   as.ts()
+
 # Box.test(resid.ts, lag = 24, type = "Ljung-Box")
 ```
 The residuals look random, there are no significant autocorrelations in the ACF, and they closely follow a a normal distribution in the Q-Q plot. These all indicate that the model has captured most of the underlying structure of our time series. A Ljung-Box test also yielded a p-value of 0.6733, further confirming that there is insufficient statistical evidence to reject the null hypothesis that there is no autocorrelation. We can proceed with forecasting the time series data through 2022.
@@ -572,7 +588,7 @@ co2_table <- data.frame(
 )
 
 # Print the table using kable
-kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80\\% Confidence Intervals")%>%
+kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80% Confidence Intervals")%>%
   kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
 
@@ -585,7 +601,8 @@ forecast_2100 <- forecast_df %>%
 
 # Create variance column
 forecast_2100$std <- sqrt(variance(forecast_2100$value))
-forecast_2100_table<-forecast_2100 %>%select("index",".mean","std") %>%
+forecast_2100_table<-forecast_2100 %>%
+  dplyr::select("index",".mean","std") %>%
   mutate(.mean = round(.mean,1), std = round(std,1)) %>%
   rename(
     Date =index,
@@ -642,7 +659,7 @@ data_processed <- data_raw %>%
 data_clean <- data_processed %>%
   arrange(datetime) %>%
   distinct(datetime, .keep_all = TRUE) %>%  # Remove duplicates, if any
-  select(datetime, value)
+  dplyr::select(datetime, value)
 
 # create time series object
 co2_present <- ts(data_clean$value, frequency = 52, start = c(year(min(data_processed$datetime)), 1))
@@ -804,7 +821,7 @@ future_data<- future_data %>%
   as_tsibble(index = index)
 
 forecast_poly_season <- co2_models_x %>%
-  select(poly_season_model) %>%
+  dplyr::select(poly_season_model) %>%
   forecast(new_data = future_data)  # Use a forecast horizon from the last observed point
 
 
@@ -904,7 +921,7 @@ new_co2_tsib <- new_co2_tsib %>%
 # Impute using spline interpolation for the 18 missing values
 new_co2_tsib_impute <- new_co2_tsib %>%
   mutate(value = na_interpolation(value, option = "spline")) %>% # Using spline interpolation
-  select(datetime, value)
+  dplyr::select(datetime, value)
 
 # Use decomposition
 stl_model <- new_co2_tsib_impute %>%
@@ -938,23 +955,23 @@ test_end_date <- yearweek("2024-09-29")    # End of September 2024
 # Seasonally Adjusted (SA) training and test sets
 # SA Training set 
 train_SA <- stl_components %>%
-  select(datetime, trend) %>%
+  dplyr::select(datetime, trend) %>%
   filter(datetime <= train_end_date)
 
 # SA Test set
 test_SA <- stl_components %>%
-  select(datetime, trend) %>%
+  dplyr::select(datetime, trend) %>%
   filter(datetime >= test_start_date & datetime <= test_end_date) 
 
 # Non-Seasonally Adjusted (NSA) training and test sets
 # NSA Training set 
 train_NSA <- new_co2_tsib_impute %>%
-  select(datetime, value) %>%
+  dplyr::select(datetime, value) %>%
   filter(datetime <= train_end_date)
 
 # NSA Test set 
 test_NSA <- new_co2_tsib_impute %>%
-  select(datetime, value) %>%
+  dplyr::select(datetime, value) %>%
   filter(datetime >= test_start_date & datetime <= test_end_date) 
 ```
 
@@ -1006,11 +1023,11 @@ model.bic.present.nsa <- train_NSA %>%
 
 # Extract the glances
 nsa.arima111011.report <- model.bic.present.nsa %>%
-  select(arima111011) %>%
+  dplyr::select(arima111011) %>%
   glance()
 
 nsa.auto.report <- model.bic.present.nsa %>%
-  select(auto) %>%
+  dplyr::select(auto) %>%
   glance()
 
 # Look at report for auto
@@ -1030,13 +1047,13 @@ model.bic.present.sa <- train_SA %>%
 
 # Extract the report from the best ARIMA model
 sa.arima110000.report <- model.bic.present.sa %>%
-  select(arima110000)%>%
+  dplyr::select(arima110000)%>%
   glance()
 sa.arima111000.report <- model.bic.present.sa %>%
-  select(arima111000) %>%
+  dplyr::select(arima111000) %>%
   glance()
 sa.arima210000.report <- model.bic.present.sa %>%
-  select(arima210000)%>%
+  dplyr::select(arima210000)%>%
   glance()
 
 # NSA: Create a data frame for NSA models
@@ -1077,12 +1094,12 @@ For the NSA data, we will pick the model that has the lowest IC values, ARIMA(1,
 
 # Extract fitted values for the NSA ARIMA model
 nsa_fitted <- model.bic.present.nsa %>%
-  select(arima111011) %>%
+  dplyr::select(arima111011) %>%
   fitted()
 
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
-  select(arima111011) %>%
+  dplyr::select(arima111011) %>%
   forecast(new_data = test_NSA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
@@ -1101,12 +1118,12 @@ nsa_full_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted values 
 
 # Extract fitted values for the SA ARIMA model
 sa_fitted <- model.bic.present.sa %>%
-  select(arima110000) %>%
+  dplyr::select(arima110000) %>%
   fitted()
 
 # Generate forecasts for the SA ARIMA model
 sa_forecast <- model.bic.present.sa %>%
-  select(arima110000) %>%
+  dplyr::select(arima110000) %>%
   forecast(new_data = test_SA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
@@ -1126,7 +1143,7 @@ sa_full_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for
   
   
 (sa_full_plot | nsa_full_plot)/
-( sa_forecast_plot| nsa_forecast_plot)
+(sa_forecast_plot| nsa_forecast_plot)
 
 ```
 We can see that our models' fitted values in blue are extremely close to the actual values plotted in black in the top two plots. For the forecasts, both models 95% confidence intervals in blue included the actual data in black However, the NSA model seemed to provide a closer fit to the actual data. We now compare both the RMSE and MAE of both models.
@@ -1200,11 +1217,11 @@ SA_poly_model <- train_SA %>%
     poly_model = TSLM(trend ~ poly(datetime, 3,raw = TRUE))     # Cubic polynomial time trend model
   )
 fitted_SA_poly<- SA_poly_model %>%
-  select(poly_model) %>%
+  dplyr::select(poly_model) %>%
   fitted()
 
 forecast_SA_poly <- SA_poly_model %>%
-  select(poly_model) %>%
+  dplyr::select(poly_model) %>%
   forecast(new_data = test_SA)  # Use a forecast horizon from the last observed point
 
 SA_poly_full_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot original data
@@ -1265,8 +1282,119 @@ sa__poly_mae_test<- mean(sa_poly_test_errors$ae)
 With the non-seasonally adjusted data series, generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times (consider prediction intervals as well as point estimates in your answer). Generate a prediction for atmospheric CO2 levels in the year 2122. How confident are you that these will be accurate predictions?
 
 
-```{r}
+```{r future_prediction, echo = FALSE}
+# Generate forecasts for the NSA ARIMA model
+nsa_forecast <- model.bic.present.nsa %>%
+  dplyr::select(arima111011) %>%
+  forecast(h = "101 years") # up to 2122
+
+# Convert the forecast to a data frame for easier inspection
+forecast_df <- as.data.frame(nsa_forecast) %>%
+  mutate(monthyear = yearmonth(datetime))
+
+# Look at when CO2 levels are predicted to reach 420 ppm
+threshold_420 <- forecast_df %>%
+  filter(.mean >= 420 & .mean < 421)
+
+# Extract the mean and variance from threshold_420
+mean_420 <- threshold_420$.mean  # Mean value
+variance_420 <- variance(threshold_420$value)  # Extract variance from the distribution
+
+# Calculate standard deviation
+sd_420 <- sqrt(variance_420)
+
+# Calculate the 80% confidence interval
+ci_lower_420 <- mean_420 - 1.28 * sd_420
+ci_upper_420 <- mean_420 + 1.28 * sd_420
+
+# Look at when CO2 levels are predicted to reach 500 ppm
+threshold_500 <- forecast_df %>%
+  filter(.mean >= 500 & .mean < 501)
+
+# Extract the mean and variance from threshold_420
+mean_500 <- threshold_500$.mean  # Mean value
+variance_500 <- variance(threshold_500$value)  # Extract variance from the distribution
+
+# Calculate standard deviation
+sd_500 <- sqrt(variance_500)
+
+# Calculate the 80% confidence interval
+ci_lower_500 <- mean_500 - 1.28 * sd_500
+ci_upper_500 <- mean_500 + 1.28 * sd_500
+
+```
+
+```{r match_values}
+# Define a function to get the closest value
+get_closest <- function(target, values) {
+  values[which.min(abs(values - target))]
+}
+
+# get first and last values
+last_420 <- c(ci_lower_420[length(ci_lower_420)], ci_upper_420[length(ci_upper_420)])
+last_500 <- c(ci_lower_500[length(ci_lower_500)], ci_upper_500[length(ci_upper_500)])
+
+# Find the closest .mean values in forecast_df to each target in last_420
+closest_420 <- sapply(last_420, get_closest, values = forecast_df$.mean)
+
+# Filter forecast_df for the closest .mean values for 420 ppm
+matching_dates_420 <- forecast_df %>%
+  filter(.mean %in% closest_420) %>%
+  dplyr::select(monthyear, .mean)
+
+# Find the closest .mean values in forecast_df to each target in last_500
+closest_500 <- sapply(last_500, get_closest, values = forecast_df$.mean)
+
+# Filter forecast_df for the closest .mean values for 500 ppm
+matching_dates_500 <- forecast_df %>%
+  filter(.mean %in% closest_500) %>%
+  dplyr::select(monthyear, .mean)
+
+# # Display the results
+# matching_dates_420
+# matching_dates_500
+# 
+# # Looking at confidence intervals for first and last time 420 and 500 level is reached
+# c(ci_lower_420[1],  ci_upper_420[1])
+# c(ci_lower_500[1],  ci_upper_500[1])
+
+```
 
 
+```{r forecast_420_500, echo = FALSE, message = FALSE}
+# Create a data frame with blanks
+co2_table <- data.frame(
+  `CO2 Level` = c("420 ppm", "500 ppm"),  # CO2 levels to track
+  `First Month` = c("2022 Nov", "2043 Jun"),      
+  `First Value` = c("419.01", "468.6"),       
+  `Last Month` = c("2024 Jul", "2068 Dec"),      
+  `Last Value` = c("422.7", "532.9")      
+)
+
+# Print the table using kable
+kable(co2_table, caption = "CO2 Levels and Forecasted Times ARIMA NSA with 80% Confidence Intervals")%>%
+  kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
+```
+
+Our model also forecasts CO2 levels in the year 2122. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as the global effort to achieve net-zero GHG emissions by transitioning away from gas-cars to EVs. Thus, since these are very human-activity dependent, it is unlikely to be super accurate.
+
+```{r forecast_2122, echo = FALSE, message = FALSE}
+# Extract the forecast for the year 2100
+forecast_2122 <- forecast_df %>%
+  filter(year(datetime) == 2122)
+
+# Create variance column
+forecast_2122$std <- sqrt(variance(forecast_2122$value))
+forecast_2122_table<-forecast_2122 %>%
+  dplyr::select("monthyear",".mean","std") %>%
+  mutate(.mean = round(.mean,1), std = round(std,1)) %>%
+  rename(
+    Date =monthyear,
+    Value = .mean,
+    SD = std
+  )
+# Print forecast for 2122
+kable(forecast_2122_table, caption = "CO2 Forecasts in 2122")%>%
+  kable_styling(font_size = 9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
 
