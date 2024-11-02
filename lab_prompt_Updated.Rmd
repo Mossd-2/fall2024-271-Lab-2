@@ -1161,14 +1161,14 @@ nsa_forecast_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted val
   autolayer(train_NSA, value, color = "black") +  # Actual values for training data
   autolayer(nsa_forecast, color = "blue2") +  # Forecast for test data
   autolayer(test_NSA, value, color = "black") +  # Actual values for test data
-  labs(title = "NSA: Assessing ARIMA(1,1,1)(0,1,1)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
+  labs(title = "NSA: Assessing ARIMA(0,1,3)(2,1,0)[52]\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
   coord_cartesian(xlim = c(as.Date("2020-01-01"), NA), ylim=c(375,450)) # Limit to data from 2020 onwards
 
 nsa_full_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted values for training data
   autolayer(train_NSA, value, color = "black",alpha = 0.8) +  # Actual values for training data
   autolayer(nsa_forecast, color = "blue2") +  # Forecast for test data
   autolayer(test_NSA, value, color = "black") +  # Actual values for test data
-  labs(title = "NSA: Comparing ARIMA(1,1,1)(0,1,1)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
+  labs(title = "NSA: Comparing ARIMA(0,1,3)(2,1,0)[52]\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
 
 # Extract fitted values for the SA ARIMA model
 sa_fitted <- model.bic.present.sa %>%
@@ -1185,7 +1185,7 @@ sa_forecast_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values
   autolayer(train_SA, seasonally_adjusted_value, color = "black") +  # Actual values for training data
   autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
   autolayer(test_SA, seasonally_adjusted_value, color = "black") +  # Actual values for test data
-  labs(title = "SA: Assessing ARIMA(1,1,0)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
+  labs(title = "SA: Assessing ARIMA(4,1,1)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
   coord_cartesian(xlim = c(as.Date("2020-01-01"), NA), ylim=c(375,450))  # Limit to data from 2020 onwards
 
 # Plot the fitted values for training, forecast for test data, and actual data
@@ -1193,7 +1193,7 @@ sa_full_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for
   autolayer(train_SA, seasonally_adjusted_value, color = "black", alpha = 0.8) +  # Actual values for training data
   autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
   autolayer(test_SA, seasonally_adjusted_value, color = "black") +  # Actual values for test data
-  labs(title = "SA: Comparing ARIMA(1,1,0)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
+  labs(title = "SA: Comparing ARIMA(4,1,1)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
   
   
 (sa_full_plot | nsa_full_plot)/
