@@ -726,20 +726,6 @@ new_co2_monthly_averages <- data_clean %>%
   ungroup() %>%
   as_tsibble(index = month)  # Convert to tsibble
 
-# # make a monthly average co2 plot
-# new_monthly_co2_ave_plot <- new_co2_monthly_averages %>%
-#   mutate(month_str = factor(month.abb[month], levels = month.abb)) %>% 
-#   ungroup() %>% 
-#   ggplot(aes(x = month_str, y = co2_monthly_ave, group = 1)) +
-#   geom_line(size = .8, color = 'purple4') +
-#   geom_point(size = 1.5) +
-#   ggtitle("Average CO2 Concentrations Across\nEach Month") +
-#   xlab('Month') +
-#   ylab('Co2 Concentrations (ppmv)') +
-#   theme(axis.text.x = element_text(angle = 45))
-
-
-
 # Convert your data to a tsibble (if not already in tsibble format)
 data_tsibble <- as_tsibble(data_clean, index = datetime)
 data_tsibble <- data_tsibble %>%
@@ -921,11 +907,11 @@ new_co2_tsib <- new_co2_tsib %>%
 # Impute using spline interpolation for the 18 missing values
 new_co2_tsib_impute <- new_co2_tsib %>%
   mutate(value = na_interpolation(value, option = "spline")) %>% # Using spline interpolation
-  dplyr::select(datetime, value)
+  select(datetime, value)
 
 # Use decomposition
 stl_model <- new_co2_tsib_impute %>%
-  model(STL(value ~ season(window = "periodic")))  # STL decomposition with seasonal component
+  model(STL(value ~ season(window = 52)))  # STL decomposition with seasonal component
 
 # Extract the components (trend, season, remainder) from the STL model
 stl_components <- components(stl_model)
@@ -941,11 +927,10 @@ stl_plot
 ```{r splitting train test set, echo = FALSE}
 # Convert datetime to yearweek format
 stl_components <- stl_components %>%
-  mutate(datetime = yearweek(datetime))
+  mutate(datetime = yearweek(datetime), seasonally_adjusted_value = value - season_year)# Subtract the seasonal component
 
 new_co2_tsib_impute <- new_co2_tsib_impute %>%
   mutate(datetime = yearweek(datetime))
-
 
 # Define training and test date ranges
 train_end_date <- yearweek("2022-09-25")  # End of September 2022
@@ -955,12 +940,12 @@ test_end_date <- yearweek("2024-09-29")    # End of September 2024
 # Seasonally Adjusted (SA) training and test sets
 # SA Training set 
 train_SA <- stl_components %>%
-  dplyr::select(datetime, trend) %>%
+  dplyr::select(datetime, seasonally_adjusted_value) %>%
   filter(datetime <= train_end_date)
 
 # SA Test set
 test_SA <- stl_components %>%
-  dplyr::select(datetime, trend) %>%
+  dplyr::select(datetime, seasonally_adjusted_value) %>%
   filter(datetime >= test_start_date & datetime <= test_end_date) 
 
 # Non-Seasonally Adjusted (NSA) training and test sets
@@ -981,26 +966,26 @@ We now look at the ACFs and PACFs of the SA and NSA training data, with a differ
 
 ```{r acf-and-pacfs, echo = FALSE, fig.align='center', fig.height=5, fig.width=10, out.width="100%", fig.cap = "EDA on training and test sets"}
 # Compute the ACF plot for NSA data
-train_NSA_acf <- ACF(train_NSA, difference(value,lag = 1), lag_max = 104) %>% autoplot()+ 
-  labs(title = "ACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st order", x = 'Lag', y = 'Autocorrelation')
+train_NSA_acf <- ACF(train_NSA, difference(difference(value,lag=1),lag=52), lag_max = 104) %>% autoplot()+ 
+  labs(title = "ACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st and 52nd", x = 'Lag', y = 'Autocorrelation')
 
 # Compute the PACF plot for NSA data
-train_NSA_pacf <- PACF(train_NSA, difference(value,lag=1), lag_max = 104) %>% autoplot()+ 
-  labs(title = "PACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st order", 
+train_NSA_pacf <- PACF(train_NSA, difference(difference(value,lag=1),lag=52), lag_max = 104) %>% autoplot()+ 
+  labs(title = "PACF plot of NSA Weekly CO2 Concentrations",subtitle = "Training Set, differenced 1st and 52nd", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 
 # Compute the ACF plot for SA data
-train_SA_acf <- ACF(train_SA, difference(trend,lag=1), lag_max = 104) %>%
+train_SA_acf <- ACF(train_SA, difference(difference(seasonally_adjusted_value,lag=1),lag=52), lag_max = 104) %>%
   autoplot() + 
-  labs(title = "ACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st order", 
+  labs(title = "ACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st and 52nd", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 
 # Compute the PACF plot for SA data
-train_SA_pacf <- PACF(train_SA, difference(trend,lag=1), lag_max = 104) %>%
+train_SA_pacf <- PACF(train_SA, difference(difference(seasonally_adjusted_value,lag=1),lag=52), lag_max = 104) %>%
   autoplot() + 
-  labs(title = "PACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st order", 
+  labs(title = "PACF plot of SA Weekly CO2 Concentrations", subtitle = "Training Set, differenced 1st and 52nd", 
        x = 'Lag', y = 'Partial Autocorrelation')
 
 # Display the plots
@@ -1008,24 +993,17 @@ train_SA_pacf <- PACF(train_SA, difference(trend,lag=1), lag_max = 104) %>%
 
 ```
 
-We note that the NSA ACF shows clear seasonality, indicating that should include a seasonal difference. The NSA PACF also shows significant autocorrelation up to the first 13 lags. Given that both ACFs and PACFs have some tapering off and show clear seasonality, we should try both an AR and MA model with a seasonal difference and seasonal AR and MA components, perhaps ARIMA(1,1,1)(1,1,1). We will also let the `ARIMA` function choose a model for us.
-
-For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will try a ARIMA(1,1,0), ARIMA(1,1,1), and ARIMA(2,1,0). We get the tables below.
+We note that the NSA ACF shows a sharp tapering off, while the PACF tapers off more slowly. This indicates perhaps a MA model might be more suitable. We also still see spikes at teh 52th lags, indicating we could perhaps add a MA seasonal component, and also difference. We thus expect perhaps something like  ARIMA(0,1,1)(0,1,1); however, we will let the `ARIMA` function choose a model for us. For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will simply let the `ARIMA` function pick the best model. We get the tables below.
 
 ```{r training models, echo = FALSE, cache = TRUE}
 # NSA
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic.present.nsa <- train_NSA %>%
   model(
-    arima111011 = ARIMA(value ~ 0 + pdq(1,1,1) + PDQ(0,1,1)),
     auto = ARIMA(value, stepwise = FALSE, ic = "bic")
     )
 
-# Extract the glances
-nsa.arima111011.report <- model.bic.present.nsa %>%
-  dplyr::select(arima111011) %>%
-  glance()
-
+# Extract the glance
 nsa.auto.report <- model.bic.present.nsa %>%
   dplyr::select(auto) %>%
   glance()
@@ -1035,41 +1013,38 @@ nsa.auto.report <- model.bic.present.nsa %>%
 #   select(auto) %>%
 #   report()
 
-
 #SA
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic.present.sa <- train_SA %>%
   model(
-    arima110000 = ARIMA(trend ~ pdq(1,1,0) + PDQ(0,0,0), ic = "bic"),
-    arima111000 = ARIMA(trend ~ pdq(1,1,1) + PDQ(0,0,0), ic = "bic"),
-    arima210000 = ARIMA(trend ~ pdq(2,1,0) + PDQ(0,0,0), ic = "bic")
-    )
+    #arima = ARIMA(seasonally_adjusted_value ~ 0 + pdq(0,1,4)))
+    auto = ARIMA(seasonally_adjusted_value, stepwise = FALSE, ic = "bic"))
+    
+
+# Look at report for auto
+# model.bic.present.sa %>%
+#   select(auto) %>%
+#   report()
 
 # Extract the report from the best ARIMA model
-sa.arima110000.report <- model.bic.present.sa %>%
-  dplyr::select(arima110000)%>%
-  glance()
-sa.arima111000.report <- model.bic.present.sa %>%
-  dplyr::select(arima111000) %>%
-  glance()
-sa.arima210000.report <- model.bic.present.sa %>%
-  dplyr::select(arima210000)%>%
+sa.auto.report <- model.bic.present.sa %>%
+  select(auto)%>%
   glance()
 
 # NSA: Create a data frame for NSA models
 nsa_table <- data.frame(
-  Model = c("ARIMA(1,1,1)(0,1,1)", "Auto: ARIMA(0,1,3)(2,1,0)"),
-  AICc = c(nsa.arima111011.report$AICc, nsa.auto.report$AICc),
-  BIC = c(nsa.arima111011.report$BIC, nsa.auto.report$BIC),
-  LogLik = c(nsa.arima111011.report$log_lik, nsa.auto.report$log_lik)
+  Model = c("Auto: ARIMA(0,1,3)(2,1,0)[52]"),
+  AICc = c(nsa.auto.report$AICc),
+  BIC = c(nsa.auto.report$BIC),
+  LogLik = c(nsa.auto.report$log_lik)
 )
 
-# SA: Create a data frame for SA models
+# SA: Create a data frame for SA model
 sa_table <- data.frame(
-  Model = c("ARIMA(1,1,0)", "ARIMA(1,1,1)", "ARIMA(2,1,0)"),
-  AICc = c(sa.arima110000.report$AICc, sa.arima111000.report$AICc, sa.arima210000.report$AICc),
-  BIC = c(sa.arima110000.report$BIC, sa.arima111000.report$BIC, sa.arima210000.report$BIC),
-  LogLik = c(sa.arima110000.report$log_lik, sa.arima111000.report$log_lik, sa.arima210000.report$log_lik)
+  Model = c("Auto: ARIMA(4,1,1)"),
+  AICc = c(sa.auto.report$AICc),
+  BIC = c(sa.auto.report$BIC),
+  LogLik = c(sa.auto.report$log_lik)
 )
 
 ```
@@ -1085,7 +1060,86 @@ kable(sa_table, caption = "SA ARIMA Model Results")%>%
   kable_styling(font_size = 9,latex_options = "HOLD_position") 
 ```
 
-For the NSA data, we will pick the model that has the lowest IC values, ARIMA(1,1,1)(0,1,1), as it clearly outperforms the model picked by the `ARIMA` function.For SA data, all models are almost par; we will thus choose the parsimonious model of ARIMA(1,1,0). We now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models.
+Now we assess the residuals for the NSA model ARIMA(0,1,3)(2,1,0)[52]. We get the following plots.
+
+```{r assessing-residuals-nsa, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA model for NSA data"}
+# Extract residuals from the ARIMA model
+residuals_arima.nsa <- model.bic.present.nsa %>%
+  dplyr::select(auto) %>%
+  residuals()
+residuals_arima.nsa <- residuals_arima.nsa %>%
+  mutate(datetime = as.Date(datetime))
+
+# Plot the residuals over time
+residual_plot.nsa <- autoplot(residuals_arima.nsa) +
+  labs(title = "Residuals of ARIMA(0,1,3)(2,1,0)[52] ", x = "Year", y = "Residuals")
+
+# Plot the ACF of the residuals
+acf_plot.nsa <- ggAcf(residuals_arima.nsa) +
+  labs(title = "ACF of ARIMA(0,1,3)(2,1,0)[52]  Residuals", x = "Lag", y = "ACF")
+
+# Q-Q plot to check normality of residuals
+qq_plot.nsa <- ggplot(data = as.data.frame(residuals_arima.nsa), aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(title = "Q-Q Plot of ARIMA(0,1,3)(2,1,0)[52]  Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+residual_plot.nsa|acf_plot.nsa |qq_plot.nsa
+
+```
+They mostly look like white noise, and the q-q plot is moderately close to a normal distribution. A Ljung Box Test on the residuals yielded a p-value of 0.1173, indicating insufficient evidence to reject the null-hypothesis that there is no auto-correlation. We are good with this model, and now proceed to assess the residuals for the ACF plot. 
+```{r ljung box test nsa, echo = FALSE, warning= FALSE}
+# Ljung Box Test on residuals
+resid.ts.nsa <- residuals_arima.nsa %>%
+  dplyr::select(.resid) %>%
+  pull(.resid)  # Convert to a numeric vector
+
+# Convert the residuals into a time series object
+resid.ts.nsa <- ts(resid.ts.nsa)
+
+# Perform the Ljung-Box test on the residuals
+# Box.test(resid.ts.nsa, lag = 52, type = "Ljung-Box")
+```
+
+```{r assessing-residuals-sa, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA model for SA data"}
+# Extract residuals from the ARIMA model
+residuals_arima.sa <- model.bic.present.sa %>%
+  dplyr::select(auto) %>%
+  residuals()
+residuals_arima.sa <- residuals_arima.sa %>%
+  mutate(datetime = as.Date(datetime))
+
+# Plot the residuals over time
+residual_plot.sa <- autoplot(residuals_arima.sa) +
+  labs(title = "Residuals of ARIMA(4,1,1)", x = "Year", y = "Residuals")
+
+# Plot the ACF of the residuals
+acf_plot.sa <- ggAcf(residuals_arima.sa) +
+  labs(title = "ACF of ARIMA(4,1,1) Residuals", x = "Lag", y = "ACF")
+
+# Q-Q plot to check normality of residuals
+qq_plot.sa <- ggplot(data = as.data.frame(residuals_arima.sa), aes(sample = .resid)) +
+  stat_qq() +
+  stat_qq_line() +
+  labs(title = "Q-Q Plot of ARIMA(4,1,1) Residuals", x = "Theoretical Quantiles", y = "Sample Quantiles")
+
+residual_plot.sa|acf_plot.sa |qq_plot.sa
+
+```
+
+```{r ljung box test sa, echo = FALSE, warning= FALSE}
+# Ljung Box Test on residuals
+resid.ts.sa <- residuals_arima.sa %>%
+  dplyr::select(.resid) %>%
+  pull(.resid)  # Convert to a numeric vector
+
+# Convert the residuals into a time series object
+resid.ts.sa <- ts(resid.ts.sa)
+
+# Perform the Ljung-Box test on the residuals
+#Box.test(resid.ts.sa, lag = 52, type = "Ljung-Box")
+```
+We can see that the residuals do not look like white noise, and a Ljung-Box test yielded a p-value of < 1.07e-09, indicating sufficient evidence to reject the null-hypothesis that there is no auto-correlation. We tried other models like an ARIMA(0,1,4) from studying the ACF and PACF plots, but it did not improve the results. Nonetheless, we now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models. 
 
 \newpage
 
@@ -1094,12 +1148,12 @@ For the NSA data, we will pick the model that has the lowest IC values, ARIMA(1,
 
 # Extract fitted values for the NSA ARIMA model
 nsa_fitted <- model.bic.present.nsa %>%
-  dplyr::select(arima111011) %>%
+  dplyr::select(auto) %>%
   fitted()
 
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
-  dplyr::select(arima111011) %>%
+  dplyr::select(auto) %>%
   forecast(new_data = test_NSA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
@@ -1118,27 +1172,27 @@ nsa_full_plot<-autoplot(nsa_fitted,.fitted, color = "blue2") +  # Fitted values 
 
 # Extract fitted values for the SA ARIMA model
 sa_fitted <- model.bic.present.sa %>%
-  dplyr::select(arima110000) %>%
+  dplyr::select(auto) %>%
   fitted()
 
 # Generate forecasts for the SA ARIMA model
 sa_forecast <- model.bic.present.sa %>%
-  dplyr::select(arima110000) %>%
+  dplyr::select(auto) %>%
   forecast(new_data = test_SA)
 
 # Plot the fitted values for training, forecast for test data, and actual data
 sa_forecast_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for training data
-  autolayer(train_SA, trend, color = "black") +  # Actual values for training data
+  autolayer(train_SA, seasonally_adjusted_value, color = "black") +  # Actual values for training data
   autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
-  autolayer(test_SA, trend, color = "black") +  # Actual values for test data
+  autolayer(test_SA, seasonally_adjusted_value, color = "black") +  # Actual values for test data
   labs(title = "SA: Assessing ARIMA(1,1,0)\nForecasted Values On Test Set", x = "Year", y = "CO2 concentrations (ppmv)") +
   coord_cartesian(xlim = c(as.Date("2020-01-01"), NA), ylim=c(375,450))  # Limit to data from 2020 onwards
 
 # Plot the fitted values for training, forecast for test data, and actual data
 sa_full_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for training data
-  autolayer(train_SA, trend, color = "black", alpha = 0.8) +  # Actual values for training data
+  autolayer(train_SA, seasonally_adjusted_value, color = "black", alpha = 0.8) +  # Actual values for training data
   autolayer(sa_forecast,color = "blue2") +  # Forecast for test data
-  autolayer(test_SA, trend, color = "black") +  # Actual values for test data
+  autolayer(test_SA, seasonally_adjusted_value, color = "black") +  # Actual values for test data
   labs(title = "SA: Comparing ARIMA(1,1,0)\nFit on Training Data", x = "Year", y = "CO2 concentrations (ppmv)")
   
   
@@ -1164,8 +1218,8 @@ nsa_mae_train <- mean(nsa_train_errors$ae)
 sa_train_errors <- sa_fitted %>%
   left_join(train_SA, by = "datetime") %>%
   mutate(
-    se = (trend - .fitted)^2,
-    ae = abs(trend - .fitted)
+    se = (seasonally_adjusted_value - .fitted)^2,
+    ae = abs(seasonally_adjusted_value - .fitted)
   )
 sa_rmse_train <- sqrt(mean(sa_train_errors$se))
 sa_mae_train <- mean(sa_train_errors$ae)
@@ -1186,8 +1240,8 @@ nsa_mae_test <- mean(nsa_test_errors$ae)
 sa_test_errors <- sa_forecast %>%
   left_join(test_SA, by = "datetime") %>%
   mutate(
-    se = (trend.y - .mean)^2,
-    ae = abs(trend.y - .mean)
+    se = (seasonally_adjusted_value.y - .mean)^2,
+    ae = abs(seasonally_adjusted_value.y - .mean)
   )
 sa_rmse_test <- sqrt(mean(sa_test_errors$se))
 sa_mae_test<- mean(sa_test_errors$ae)
@@ -1207,14 +1261,14 @@ kable(model_comparison, caption = "Comparison of NSA and SA Models on Training a
   kable_styling(font_size = 9,latex_options = "HOLD_position") 
 ```
 
-As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set, indicating that the NSA model of ARIMA(1,1,1)(0,1,1) generalizes better. Given that our SA ARIMA model can be improved, we now fit a polynomial time-trend model for the SA series and compare it with the SA ARIMA model.
+As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set, indicating that the NSA model of ARIMA(0,1,3)(2,1,0) generalizes better. Given that our SA ARIMA model can be improved, we now fit a polynomial time-trend model for the SA series and compare it with the SA ARIMA model.
 
 \newpage
 
 ```{r SA-poly-model, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%", fig.cap = "Assessing Polynomia (3) Model on SA data", echo = FALSE}
 SA_poly_model <- train_SA %>%
   model(
-    poly_model = TSLM(trend ~ poly(datetime, 3,raw = TRUE))     # Cubic polynomial time trend model
+    poly_model = TSLM(seasonally_adjusted_value ~ poly(datetime, 3,raw = TRUE))     # Cubic polynomial time trend model
   )
 fitted_SA_poly<- SA_poly_model %>%
   dplyr::select(poly_model) %>%
@@ -1224,20 +1278,20 @@ forecast_SA_poly <- SA_poly_model %>%
   dplyr::select(poly_model) %>%
   forecast(new_data = test_SA)  # Use a forecast horizon from the last observed point
 
-SA_poly_full_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot original data
+SA_poly_full_plot <- autoplot(train_SA, seasonally_adjusted_value) +  # Plot original data  # Plot original data
   autolayer(fitted_SA_poly, .fitted, color = "blue2")+
   autolayer(forecast_SA_poly, color = "blue2") +  # Add forecasted values
-  autolayer(test_SA, trend)+
+  autolayer(test_SA, seasonally_adjusted_value)+
   labs(title = "Polynomial (3) Model Fit on SA Training Set",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
   guides(colour = guide_legend(title = "Series"))
 
 
-SA_poly_forecast_plot <- autoplot(train_SA, trend) +  # Plot original data  # Plot original data
+SA_poly_forecast_plot <- autoplot(train_SA, seasonally_adjusted_value) +  # Plot original data  # Plot original data
   autolayer(fitted_SA_poly, .fitted, color = "blue2")+
   autolayer(forecast_SA_poly, color = "blue2") +  # Add forecasted values
-  autolayer(test_SA, trend)+
+  autolayer(test_SA, seasonally_adjusted_value)+
   labs(title = "Assessing Polynomial (3) Model on SA Test Set",
        x = "Year", y = "CO2 concentrations (ppmv)") +
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
@@ -1246,22 +1300,22 @@ SA_poly_forecast_plot <- autoplot(train_SA, trend) +  # Plot original data  # Pl
 SA_poly_full_plot | SA_poly_forecast_plot
 
 ```
-We can see that Polynomial (3) model seems to fit the overall trend decently, although it does not perform so well on the forecast, with the actual data out of the 95% confidence interval. The Polynomial (3) model also yielded a RMSE and MAE of 0.519 and 0.402 respectively for the training set, and a RMSE and MAE of 1.12 and 1.04 respectively for the test set. Although the ARIMA model outperformed the Polynomial (3) model by far on the training sets, the Polynomial (3) model did better with a lower RMSE and MAE on the test set.
+We can see that Polynomial (3) model seems to fit the overall trend decently, although it does not perform so well on the forecast, with the actual data out of the 95% confidence interval. The Polynomial (3) model also yielded a RMSE and MAE of 0.7558659 and 0.6160157 respectively for the training set, and a RMSE and MAE of 1.611581 and 1.377034 respectively for the test set. Although the ARIMA models outperformed the Polynomial (3) model by far on the training sets, the Polynomial (3) model did better with a lower RMSE and MAE on the test set.
 
 ```{r assesing poly three model, echo = FALSE}
 # Calculate RMSE and MAE for poly (3) model
 sa_poly_train_errors <- train_SA %>%
   left_join(fitted_SA_poly, by = "datetime") %>%
   mutate(
-    se = (trend - .fitted)^2,
-    ae = abs(trend - .fitted)
+    se = (seasonally_adjusted_value - .fitted)^2,
+    ae = abs(seasonally_adjusted_value - .fitted)
   )
 
 sa_poly_test_errors <- test_SA %>%
   left_join(forecast_SA_poly, by = "datetime") %>%
   mutate(
-    se = (trend.x - .mean)^2,
-    ae = abs(trend.x - .mean)
+    se = (seasonally_adjusted_value.x - .mean)^2,
+    ae = abs(seasonally_adjusted_value.x - .mean)
   )
 
 sa_poly_rmse_train <- sqrt(mean(sa_poly_train_errors$se))
@@ -1279,13 +1333,12 @@ sa__poly_mae_test<- mean(sa_poly_test_errors$ae)
 
 ## (3 points) Task Part 6b: How bad could it get?
 
-With the non-seasonally adjusted data series, generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times (consider prediction intervals as well as point estimates in your answer). Generate a prediction for atmospheric CO2 levels in the year 2122. How confident are you that these will be accurate predictions?
-
+With the non-seasonally adjusted data series, we now generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times. We also generate a prediction for atmospheric CO2 levels in the year 2122.
 
 ```{r future_prediction, echo = FALSE}
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
-  dplyr::select(arima111011) %>%
+  dplyr::select(auto) %>%
   forecast(h = "101 years") # up to 2122
 
 # Convert the forecast to a data frame for easier inspection
@@ -1351,12 +1404,12 @@ matching_dates_500 <- forecast_df %>%
   dplyr::select(monthyear, .mean)
 
 # # Display the results
-# matching_dates_420
-# matching_dates_500
-# 
-# # Looking at confidence intervals for first and last time 420 and 500 level is reached
-# c(ci_lower_420[1],  ci_upper_420[1])
-# c(ci_lower_500[1],  ci_upper_500[1])
+matching_dates_420
+matching_dates_500
+
+# Looking at confidence intervals for first and last time 420 and 500 level is reached
+c(ci_lower_420[1],  ci_upper_420[1])
+c(ci_lower_500[1],  ci_upper_500[1])
 
 ```
 
