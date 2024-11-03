@@ -1378,34 +1378,25 @@ ci_upper_500 <- mean_500 + 1.28 * sd_500
 ```
 
 ```{r match_values}
-# Define a function to get the closest value
-get_closest <- function(target, values) {
-  values[which.min(abs(values - target))]
-}
-
 # get first and last values
 last_420 <- c(ci_lower_420[length(ci_lower_420)], ci_upper_420[length(ci_upper_420)])
 last_500 <- c(ci_lower_500[length(ci_lower_500)], ci_upper_500[length(ci_upper_500)])
 
-# Find the closest .mean values in forecast_df to each target in last_420
-closest_420 <- sapply(last_420, get_closest, values = forecast_df$.mean)
+# Filter threshold_420 for the closest .mean values for 420 ppm
+matching_dates_420 <- data.frame(
+  `MonthYear` = c(threshold_420$monthyear[1], threshold_420$monthyear[nrow(threshold_420)]),
+  `CO2_Level_ppm` = c(threshold_420$.mean[1], threshold_420$.mean[nrow(threshold_420)])
+  )
 
-# Filter forecast_df for the closest .mean values for 420 ppm
-matching_dates_420 <- forecast_df %>%
-  filter(.mean %in% closest_420) %>%
-  dplyr::select(monthyear, .mean)
-
-# Find the closest .mean values in forecast_df to each target in last_500
-closest_500 <- sapply(last_500, get_closest, values = forecast_df$.mean)
-
-# Filter forecast_df for the closest .mean values for 500 ppm
-matching_dates_500 <- forecast_df %>%
-  filter(.mean %in% closest_500) %>%
-  dplyr::select(monthyear, .mean)
+# Filter threshold_500 for the closest .mean values for 500 ppm
+matching_dates_500 <- data.frame(
+  `MonthYear` = c(threshold_500$monthyear[1], threshold_500$monthyear[nrow(threshold_500)]),
+  `CO2 Level (ppm)` = c(threshold_500$.mean[1], threshold_500$.mean[nrow(threshold_500)])
+  )
 
 # # Display the results
-matching_dates_420
-matching_dates_500
+# matching_dates_420
+# matching_dates_500
 
 # Looking at confidence intervals for first and last time 420 and 500 level is reached
 c(ci_lower_420[1],  ci_upper_420[1])
@@ -1417,10 +1408,10 @@ c(ci_lower_500[1],  ci_upper_500[1])
 # Create a data frame with blanks
 co2_table <- data.frame(
   `CO2 Level` = c("420 ppm", "500 ppm"),  # CO2 levels to track
-  `First Month` = c("2022 Nov", "2043 Jun"),      
-  `First Value` = c("419.01", "468.6"),       
-  `Last Month` = c("2024 Jul", "2068 Dec"),      
-  `Last Value` = c("422.7", "532.9")      
+  `First Month` = c("2022 Dec", "2056 Feb"),      
+  `First Value` = c("420.0", "500.4"),       
+  `Last Month` = c("2024 Sep", "2058 Aug"),      
+  `Last Value` = c("420.8", "500.8")      
 )
 
 # Print the table using kable
