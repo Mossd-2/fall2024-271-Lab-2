@@ -1413,7 +1413,6 @@ c(ci_lower_500[1],  ci_upper_500[1])
 
 ```
 
-
 ```{r forecast_420_500, echo = FALSE, message = FALSE}
 # Create a data frame with blanks
 co2_table <- data.frame(
@@ -1429,7 +1428,7 @@ kable(co2_table, caption = "CO2 Levels and Forecasted Times ARIMA NSA with 80% C
   kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
 
-Our model also forecasts CO2 levels in the year 2122. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as the global effort to achieve net-zero GHG emissions by transitioning away from gas-cars to EVs. Thus, since these are very human-activity dependent, it is unlikely to be super accurate.
+Using the non-seasonally adjusted model, the table above presents projections for when atmospheric CO₂ concentrations are anticipated to reach 420 ppm and 500 ppm levels, both for the first occurrence and the final plateau. This provides insights into the timeline of CO₂ concentration milestones based on current trends, though it does not factor in potential seasonal fluctuations or mitigation efforts.
 
 ```{r forecast_2122, echo = FALSE, message = FALSE}
 # Extract the forecast for the year 2100
@@ -1450,4 +1449,4 @@ forecast_2122_table<-forecast_2122 %>%
 kable(forecast_2122_table, caption = "CO2 Forecasts in 2122")%>%
   kable_styling(font_size = 9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
 ```
-
+Our model provides forecasts for CO2 levels up to the year 2122, including a standard deviation range. However, these projections do not account for current global initiatives aimed at reducing greenhouse gases, such as the transition from gas-powered vehicles to electric vehicles as part of the drive toward net-zero emissions. Given that CO2 levels are heavily influenced by human activities and policy changes, these forecasts are unlikely to be highly accurate over such a long horizon.
