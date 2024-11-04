@@ -460,7 +460,7 @@ acf_diff | pacf_diff
 ```
 Both ACF and PACF plots show strong auto-correlation with lag 1, and the ACF cutting off strong after lag 1, and the PACF having a significant spike at lag 1, and tapering off a little more. This might indicate that our model has a MA(1) component. The spike at lag 12 in the ACF might also indicate a seasonal MA component. 
 
-```{r model bic, echo = FALSE, message = FALSE, warning = FALSE, cache = TRUE}
+```{r model bic, echo = FALSE, message = FALSE, warning = FALSE, cache = FALSE}
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic <- co2_tsib %>%
   model(
@@ -823,7 +823,7 @@ We see a clear mismatch in predictions from the plot above. The model had predic
 
 ## (1 point) Task 3b: Compare ARIMA models forecasts against realized CO2
 
-We now cmpare the ARIMA 
+We now compare the ARIMA(0,1,1)(0,1,1)[12] model's forecasts against the realized CO2 levels.
 ```{r comparing-to-arima, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap="Forecasted with a ARIMA(0,1,1)(0,1,1)[12] Model"}
 
 # Generate forecasts from model.bic
@@ -840,7 +840,7 @@ autoplot(forecast_arima, color = "blue2") +  # Add forecast first
   
 ```
 
-The ARIMA(0,1,1)(0,1,1)[12] model, while closer in trend to the observed values than the curvilinear model, still underestimates the increases in global CO2 concentrations. The yearly fluctuations match better than the previous forecast and in the short-term the forecast performs well, but within 5 years the forecast diverges from actual concentrations and by 2020 we see concentrations of ~12.5 Co2 ppmv higher than anticipated. By 2024, the observed values at barely at the tail end of the 95% confidence interval, and look unlikely to stay within the confidence interval should the forecast continue.
+The ARIMA model, while closer in trend to the observed values than the curvilinear model, still underestimates the increases in global CO2 concentrations. The yearly fluctuations match better than the previous forecast and in the short-term the forecast performs well, but within 5 years the forecast diverges from actual concentrations and by 2020 we see concentrations of ~12.5 Co2 ppmv higher than anticipated. By 2024, the observed values at barely at the tail end of the 95% confidence interval, and look unlikely to stay within the confidence interval should the forecast continue.
 
 ## (3 points) Task 4b: Evaluate the performance of 1997 linear and ARIMA models
 
@@ -995,7 +995,7 @@ train_SA_pacf <- PACF(train_SA, difference(difference(seasonally_adjusted_value,
 
 We note that the NSA ACF shows a sharp tapering off, while the PACF tapers off more slowly. This indicates perhaps a MA model might be more suitable. We also still see spikes at the 52th lags, indicating we could perhaps add an AR seasonal component. Still, we will let the `ARIMA` function choose a model for us. For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will simply let the `ARIMA` function pick the best model. We get the tables below.
 
-```{r training models, echo = FALSE, cache = TRUE}
+```{r training models, echo = FALSE, cache = FALSE}
 # NSA
 # Fit ARIMA model by testing different lags using the BIC criterion
 model.bic.present.nsa <- train_NSA %>%
@@ -1337,7 +1337,7 @@ sa__poly_mae_test<- mean(sa_poly_test_errors$ae)
 
 With the non-seasonally adjusted data series, we now generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times. We also generate a prediction for atmospheric CO2 levels in the year 2122.
 
-```{r future-prediction, echo = FALSE, cache= TRUE}
+```{r future-prediction, echo = FALSE, cache= FALSE}
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
   dplyr::select(auto) %>%
