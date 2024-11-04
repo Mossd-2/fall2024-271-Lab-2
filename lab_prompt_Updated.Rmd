@@ -1,5 +1,6 @@
 ---
 title: 'Statistical Methods for Discrete Response, Time Series, and Panel Data (W271): Lab 2'
+subtitle: 'Jasmol Dhesi, Jonathan Ho, Diego Moss'
 geometry: margin=1in
 output:
   bookdown::pdf_document2:
@@ -49,15 +50,15 @@ knitr::opts_chunk$set(dpi=1000)
 # Report from the Point of View of 1997
 ## (3 points) Task 0a: Introduction
 
-Climate change is an increasingly pertinent issue for scientists and policymakers alike, as global temperatures rise. It is crucial to understand the underlying reasons for this increase, and its relationship with carbon emissions. This report presents potential outcomes of this constant increase, and highlights the need to anticipate future impacts of carbon emission reduction efforts.
+Climate change is an increasingly pertinent issue for scientists and policymakers alike, as global temperatures rise. It is crucial to understand the underlying reasons for this increase, and its relationship with carbon emissions. This report presents forecasts of this constant increase, and highlights the need to anticipate future impacts of carbon emission reduction efforts.
 
 Geochemist Dr. Charles David Keeling's pioneering work in atmospheric carbon dioxide measurements fundamentally reshaped our understanding of the global carbon cycle and its impact on climate change. In 1958, Keeling initiated a long-term study at the Mauna Loa Observatory, producing the iconic "Keeling Curve," which revealed the steady rise of atmospheric CO2. His research confirmed that fossil fuel combustion was contributing to increasing CO2 levels, a discovery with profound social and political consequences. This work also paved the way for further investigations into other greenhouse gases and established benchmarks for testing climate models.
 
-CO2 is classified as a “greenhouse gas,” meaning that it traps heat in the atmosphere and lead to rising global temperatures when in high concentrations. It can be important to track Co2 levels as rising global temperatures can lead to imbalances in ecosystems and rising water levels that impact both animal and human life. Monitoring CO2 levels is critical because rising concentrations contribute to global warming, with severe consequences for ecosystems, sea levels, and both human and animal life. Understanding these trends is essential for assessing the long-term impact of human activities and guiding future policies.
+CO2 is classified as a “greenhouse gas,” meaning that it traps heat in the atmosphere and leads to rising global temperatures when in high concentrations. It can be important to track CO2 levels as rising global temperatures can lead to imbalances in ecosystems and rising water levels that impact both animal and human life. Understanding these trends is essential for assessing the long-term impact of human activities and guiding future policies.
 
 ## (3 points) Task 1a: CO2 data
 
-The current data is gathered from measurements made under Dr. Charles Keeling's study at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993). Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly CO2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppmv) using the SIO manometric mole fraction scale. Dr. Keeling initially designed a device to detect Co2 concentrations to detect CO2 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing CO2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). The time series shows a clear upward trend of global CO2 concentrations from 1959 to 1998, with an average increase in 1.26 CO2 ppmv and a standard deviation of .51 CO2 ppmv. Upon inspection of the yearly increases, the bulk of changing CO2 levels are between 0.5 and 2.0 CO2 ppmv.
+The current data is gathered from measurements made under Dr. Charles Keeling's study at the Mauna Loa Observatory in Hawaii (Cleaveland, 1993), and part of the `R` object `co2`. Measurements were taken by a chemical gas analyzer sensor, with detections based on infrared absorption. This data measures monthly CO2 concentration levels from January 1959 to December 1997. Units are in parts per million of CO2 (abbreviated as ppmv) using the SIO manometric mole fraction scale. Dr. Keeling initially designed a device to detect C02 emitted from limestone near bodies of water. But his measurements revealed a pattern of increasing CO2 concentrations at the global scale, urging further need to continue tracking the gas (Keeling, 1998). The time series shows a clear upward trend of global CO2 concentrations from 1959 to 1998, with an average increase in 1.26 CO2 ppmv and a standard deviation of .51 CO2 ppmv. Upon inspection of the yearly increases, the bulk of changing CO2 levels are between 0.75 and 2.0 CO2 ppmv.
 
 ```{r time-series-and-hist, warning=FALSE, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%", fig.cap = "Data source: CO2 measurements from Mauna Loa Observatory"}
 # import data
@@ -125,9 +126,9 @@ monthly_co2_ave_plot <- co2_tsib %>% as_tibble() %>%
 
 co2_acf_plot | monthly_co2_ave_plot
 ```
-We also see a scallop/wave shaped pattern among correlations between the current value with growing lags. Clearer evidence of seasonality is shown when inspecting the monthly average the Co2 ppmv, when averaged across all years in the available data. CO2 contration peaks at the start of summer, and drops to a low in the fall, before rising again. This is likely due to the organic decomposition of plant life in these seasons (Keeling, 1960). 
+We see a wave shaped pattern among correlations between the current value and growing lags. Clearer evidence of seasonality is shown when inspecting the monthly average the CO2 ppmv, when averaged across all years in the available data. CO2 concentration peaks at the start of summer, and drops to a low in the fall, before rising again. This is likely due to the organic decomposition of plant life in these seasons (Keeling, 1960). 
 
-We now study the time series' stationarity. We first conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
+We now study the time series' stationarity. We first conduct the Augmented Dickey-Fuller (ADF) Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot, we have a clear upward trend, suggesting non-stationarity. This is confirmed by a p-value of 0.2269 yielded by the ADF test, which indicates insufficient evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
 
 ```{r seasonality-irregularities, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap = "Studying variance over time"}
 
@@ -160,7 +161,7 @@ yearly_ave_w_residuals_plot
 \newpage
 ## (3 points) Task 2a: Linear time trend model
 
-We now fit a linear time trend model the `co2` series, and examine the characteristics of the fit and residuals.
+We now fit a linear time trend model to the `co2` series, and examine the characteristics of the fit and residuals.
 
 ```{r linear quad and poly models , echo = FALSE}
 # Fit linear, quadratic, and cubic (3rd-degree polynomial) models at once
@@ -219,7 +220,7 @@ lm_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = linear_model_resid)) +
 lm_plot / lm_residuals_plot
 ```
 
-Upon inspection of linear fit, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. This indicates that perhaps a higher order polynomial might produce a better fit of the overall trend. The residuals of the linear model also exhibit a cyclical, non-linear pattern, indicating that the model does not capture the  seasonality in the data. The overall curve also suggests that the linear model insufficiently captures the overall trend. We now try a quadratic model, which may better capture the underlying trend.
+Upon inspection of linear fit, the fitted line appears to be systematically overestimating values at certain points and underestimating values at other points. This indicates that perhaps a higher order polynomial might produce a better fit of the overall trend. The residuals of the linear model also exhibit a cyclical, non-linear pattern, indicating that the model does not capture the  seasonality in the data. The overall curve also suggests that the linear model insufficiently captures the overall trend. We now try and assess a quadratic model to see if it better captures the data.
 
 
 ```{r quadratic-model-plots,echo = FALSE,fig.align='center', fig.height=4.5, fig.width=10, out.width="100%",fig.cap = "Evaluating a Quadratic Model"}
@@ -264,9 +265,9 @@ poly_plot/
 poly_residuals_plot
 ```
 
-The third-order polynomial model demonstrates improved residual behavior compared to quadratic and linear models. We chose to stop at this order to prevent excessive overfitting, as higher-order polynomials showed diminishing returns in model performance.
+The third-order polynomial model demonstrates improved residual behavior compared to quadratic and linear models, although it stil doesn't capture the seasonality. We chose to stop at this order to prevent overfitting, as higher-order polynomials showed diminishing returns in model performance.
 
-Apart from transforming the orders of the model, we were interested in data transformations - specifically logarithmic. As such we expermiented with a logarithmic dataset to observe the pattern of the data values.
+Apart from transforming the orders of the model, we were interested in data transformations - specifically logarithmic. As such we experimented with a logarithmic dataset to observe the pattern of the data values.
 
 ```{r log-transformed-plot, echo = FALSE,fig.align='center', fig.height=3, fig.width=5, out.width="80%",fig.cap = "Evaluating effect of taking a log on the series"}
 # Log transformation
@@ -280,9 +281,9 @@ log_data_plot <- ggplot(co2_tsib, aes(x = index, y = log_value)) +
 log_data_plot
 ```
 
-The logarithmic transformation reduces variance but offers minimal improvement compared to traditional plotting. This limited impact is likely due to the cyclical nature of the time series, which the transformation does not adequately address.
+The logarithmic transformation reduces variance but offers minimal improvement compared to traditional plotting. This limited impact is likely due to the cyclical nature of the time series, which the transformation does not adequately address. Furthermore, as discussed, the variance of the time series looks about constant over time, indicating that a logarithmic transformation may be unnecessary.
 
-To address the cyclical behavior, we developed another polynomial model that includes each month as a variable. The average monthly CO2 emissions indicate significant cyclic patterns at the monthly level. By incorporating this variable, we anticipate an improvement in the fit of our time series model.
+To address the cyclical behavior, we developed another polynomial (3) model that includes each month as a variable, since the average monthly CO2 emissions indicate significant cyclic patterns at the monthly level. By incorporating this variable, we anticipate an improvement in the fit of our time series model. We get the plots below.
 
 ```{r seasonal polynomial data ,echo = FALSE}
 # Create seasonal dummy variables
@@ -363,13 +364,13 @@ poly_season_residuals_plot <- ggplot(co2_tsib, aes(x = index, y = poly_season_mo
 poly_month_plot | poly_month_residuals_plot
 
 ```
-Incorporating the `month` dummy variable brought the residuals closer to zero, ranging between 1 and -1, but they still displayed a seasonal pattern. To refine the model, we grouped the months into quarters, to represent the seasons as a categorical variable, `season`.
+As seen above, incorporating the `month` dummy variable further reduced the range of residuals, they now range between 1 and -1, but the residuals still displayed a seasonal pattern. To refine the model, we grouped the months into quarter, to represent the seasons as a categorical variable, `season`.
 
 ```{r plot-seasonal,  echo = FALSE, fig.align='center', fig.height=4, fig.width=11, out.width="100%",fig.cap = "Evaluating a Polynomial (3) with season variable model"}
 poly_season_plot | poly_season_residuals_plot
 ```
-We see that using the `season` variable centered the residuals around zero with a random distribution, though fluctuations remained between 2 and -2. We now proceed with this model, the polynomial model with the `season` dummy variable, as it has the residuals plot that most look like a random distribution around the red line centered on zero, and developed a forecast for CO2 emissions through 2020.
-```{r forecasting-model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%",fig.cap = "Forecasting CO2 levels up to 2020 using a Polynomial (3) with month variable model"}
+We see that using the `season` variable resulted in residuals that most look like a random distribution around the red line centered on zero, when compared to other models tried thus far, though fluctuations increased to between 2 and -2. Still, given that the residuals look like a random distribution, we will accept the larger range of residuals, and proceed to develop a forecast for CO2 emissions through 2020 with this model.
+```{r forecasting-model, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%",fig.cap = "Forecasting CO2 levels up to 2020 using a Polynomial (3) with season variable model"}
 # Generate future monthly dates starting from January 1998 to December 2020
 future_index <- seq(from = as.Date("1998-01-01"),  # Start in January 1998
                     to = as.Date("2020-12-01"), by = "1 month")  # Generate monthly dates up to Dec 2020
@@ -408,11 +409,11 @@ autoplot(co2_tsib, value) +  # Plot original data  # Plot original data
   scale_x_yearmonth(date_breaks = "5 years", date_labels = "%Y") +
   guides(colour = guide_legend(title = "Series"))
 ```
-The forecast model using the `season` variable shows decent performance, and predicts for the upward trend to persist up to 2020, along with the annual seasonality. We will now explore an ARIMA model to see if it may better capture the time series' underlying patterns and improve forecast accuracy.
+The forecast model using the `season` variable shows decent performance, and predicts for the upward trend to persist but taper off, up to 2020. It also predicts continued annual seasonality. The tapering off is an assumption made implicitly in the model due to it being Polynomial (3), but may not be justified. We will now explore an ARIMA model to see if it will capture the time series' underlying patterns differently.
 
 ## (3 points) Task 3a: ARIMA times series model
 
-As seen in our EDA, there is non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively.
+As seen in our EDA, there is non-stationarity. Thus, we will proceed to difference the data to make it stationary, both at the 1st lag followed by the 12th lag to account for seasonality, which is a crucial step before fitting the ARIMA model effectively. We now look at the differenced time series.
 
 ```{r arima-differencing, warning=FALSE, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=10, out.width="100%",fig.cap = "Differenced series looks more stationary in the mean and variance"}
 # Apply both first-order and seasonal (12th-order) differencing
@@ -471,9 +472,9 @@ model.bic <- co2_tsib %>%
 #   select(auto) %>%
 #   report()
 ```
-The ARIMA function behaved as expected, and returned an ARIMA(0,1,1)(0,1,1)$_{12}$ function, with BIC = 182.32. We will now look at the residuals for this model.
+The ARIMA function behaved as expected, and returned an ARIMA(0,1,1)(0,1,1)[12] function, with BIC = 182.32. We will now look at the residuals for this model.
 
-```{r arima-residuals, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA model "}
+```{r arima-residuals, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA(0,1,1)(0,1,1)[12] model "}
 # Extract residuals from the ARIMA model
 residuals_arima <- residuals(model.bic)
 
@@ -505,10 +506,10 @@ resid.ts<-model.bic %>%
 
 # Box.test(resid.ts, lag = 24, type = "Ljung-Box")
 ```
-The residuals look random, there are no significant autocorrelations in the ACF, and they closely follow a a normal distribution in the Q-Q plot. These all indicate that the model has captured most of the underlying structure of our time series. A Ljung-Box test also yielded a p-value of 0.6733, further confirming that there is insufficient statistical evidence to reject the null hypothesis that there is no autocorrelation. We can proceed with forecasting the time series data through 2022.
+The residuals look random, there are no significant autocorrelations in the ACF, and they closely follow a a normal distribution in the Q-Q plot. These all indicate that the model has captured most of the underlying structure of our time series. A Ljung-Box test also yielded a p-value of 0.6733, further confirming that there is insufficient statistical evidence to reject the null hypothesis that there is no autocorrelation. We can proceed with forecasting the time series data through 2022, and note that it does not predict any tapering off of the overall trend.
 \newpage
 
-```{r arima-forecasting, fig.align='center',fig.height=4,fig.width=10,out.width="100%", echo = FALSE, warning= FALSE,fig.cap = "Forecasting up to 2022 using an ARIMA model", fig.pos = "H"}
+```{r arima-forecasting, fig.align='center',fig.height=4,fig.width=10,out.width="100%", echo = FALSE, warning= FALSE,fig.cap = "Forecasting up to 2022 using an ARIMA(0,1,1)(0,1,1)[12] model", fig.pos = "H"}
 
 # Generate forecasts from model.bic
 forecast_arima <- model.bic %>%
@@ -527,7 +528,7 @@ autoplot(co2_tsib, value) +  # Plot original data
 
 We now forecast when atmospheric CO2 is expected to be at 420 ppm and 500 ppm for the first and final times, as seen in the table below. 
 
-```{r long term forecast part one, echo = FALSE}
+```{r long-term-forecast-part-one, echo = FALSE}
 # Generate forecasts for a long horizon (up to 2100)
 long_term_forecast <- model.bic %>%
   forecast(h = "103 years")  # Forecast horizon (assuming we want predictions up to 2100)
@@ -582,17 +583,17 @@ ci_upper_500 <- mean_500 + 1.28 * sd_500
 co2_table <- data.frame(
   `CO2 Level` = c("420 ppm", "500 ppm"),  # CO2 levels to track
   `First Month` = c("2031 May", "2083 Apr"),      
-  `First Value` = c("420.1 (402.3, 438.0)", "500.4 (437.9,562.9)"),       
+  `First Value` = c("420.1 (402.3, 438.0)", "500.4 (437.9, 562.9)"),       
   `Last Month` = c("2035 Oct", "2085 Dec"),      
-  `Last Value` = c("420.4 (399.5, 441.3)", "500.9 (435.7,566.2)")      
+  `Last Value` = c("420.4 (399.5, 441.3)", "500.9 (435.7, 566.2)")      
 )
 
 # Print the table using kable
-kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80% Confidence Intervals")%>%
-  kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
+kable(co2_table, caption = "CO2 Levels and Forecasted Times with 80\\% Confidence Intervals")%>%
+  kable_styling(font_size =9,latex_options = "HOLD_position")
 ```
 
-Our model also forecasts CO2 levels in the year 2100. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as **insert efforts here**. Thus, since these are very human-activty dependent, it is unlikely to be super accurate.
+Our model also forecasts CO2 levels in the year 2100. Although these forecasts include a standard deviation, but these do not take into account the existing efforts to reduce global greenhouse gases, such as the strong push for electric vehicles to replace gas vehicles Thus, since these are very human-activity dependent, they are unlikely to be completely reliable without any exogeneous variables. Still, they can give us a sense of the overall trend and CO2 levels, ceteris paribus.
 
 ```{r forecasttwo, echo = FALSE, message = FALSE}
 # Extract the forecast for the year 2100
@@ -620,14 +621,13 @@ kable(forecast_2100_table, caption = "CO2 Forecasts in 2100")%>%
 # Report from the Point of View of the Present
 
 ## (1 point) Task 0b: Introduction
-Following our initial evaluation using Keeling’s data, we now seek to re-examine the original study to identify potential deviations in CO2 level predictions. Specifically, we aim to discern whether any discrepancies between predicted and actual CO2 levels since 1997 arise from the inherent limitations of prior models or from changes within the CO2-generating system itself.
+Following our initial evaluation using Keeling’s data from the point of view of 1997, we now seek to re-examine the original study to identify potential deviations in CO2 level predictions from the point of view of the present, in 2024. Specifically, we aim to discern whether any discrepancies between predicted and actual CO2 levels since 1997 arise from the inherent limitations of prior models or from changes within the CO2-generating system itself.
 
 Before 1997, CO2 data was collected using a chemical gas analyzer that relied on infrared absorption to measure monthly CO2 concentrations from January 1959 through December 1997. The present data collection approach, however, leverages a newer CO2 analyzer installed at Mauna Loa, employing Cavity Ring-Down Spectroscopy (CRDS). CRDS determines CO2 concentration by measuring the rate at which light is absorbed in an optical cavity, rather than the intensity. This method offers significant advantages, as it eliminates dependencies on light intensity and sample path length, providing absolute, highly accurate concentration measurements without frequent recalibration. Furthermore, CRDS is capable of hourly measurements, and its rigorous gas-flushing system ensures each sample’s reliability. These improvements in measurement precision and frequency offer researchers enhanced insight into CO2 trends, facilitating a more robust evaluation of the models' predictive capabilities and any potential systemic changes.
 
 ## (3 points) Task 1b: Create a modern data pipeline for Mona Loa CO2 data.
 
-We created a data pipeline, pulling the most recent weekly data from the [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html) page. We now conduct a similar EDA for the updated time series data from Dr. Xin Lan's study of CO2 atmospheric trends.
-
+We created a data pipeline, pulling the most recent weekly data from the [Global Monitoring Laboratory](https://gml.noaa.gov/ccgg/trends/data.html) page. We now conduct a similar EDA for the updated time series data from Dr. Xin Lan's study of CO2 atmospheric trends. We first plot the time series data for CO2 concentrations, and a histogram of the yearly changes.
 ```{r data_pipeline, echo = FALSE}
 # get co2 data from Mauna Loa weekly CO2 records url
 url <- "https://gml.noaa.gov/webdata/ccgg/trends/co2/co2_weekly_mlo.txt"
@@ -664,9 +664,6 @@ data_clean <- data_processed %>%
 # create time series object
 co2_present <- ts(data_clean$value, frequency = 52, start = c(year(min(data_processed$datetime)), 1))
 ```
-
-We first plot the time series data for CO2 concentrations, and a histogram of the yearly changes. 
-
 
 ```{r time-series-and-hist-two, warning=FALSE, echo = FALSE,fig.align='center', fig.height=4, fig.width=10, out.width="100%", fig.cap = "Data source: CO2 measurements from Mauna Loa Observatory"}
 # import data
@@ -707,7 +704,7 @@ new_change_hist <- ggplot(new_co2_tsib_yearly_change, aes(x = change)) +
 new_co2_trend_plot / new_change_hist
 
 ```
-From 1998 to 2024, the time series continues to show a clear upward trend of global CO2 concentrations, with an average increase in 1.90 CO2 ppmv and a standard deviation of .61 CO2 ppmv. These are larger values than those calculated in 1997, indicating that the time series had a larger average increase and standard deviation from 1998 to present day 2024. The histogram also shows a rightward shift in the distribution, indicating that the annual changes have increased.
+From 1998 to 2024, the time series continues to show a clear upward trend of global CO2 concentrations, with an average increase in 1.90 CO2 ppmv and a standard deviation of .61 CO2 ppmv. These are larger values than those calculated in 1997, indicating that the time series had a larger average increase and standard deviation from 1998 to present day 2024. The histogram also shows a rightward shift in the distribution, indicating that the annual changes have generally increased.
 
 We now look at the ACF plot and weekly CO2 concentration across every year to gain further clarity on the seasonality.
 \newpage
@@ -742,9 +739,9 @@ gg_season_plot <- gg_season(data_tsibble, value) +
 new_co2_acf_plot | gg_season_plot
 ```
 
-We see strong persistent autocorrelation for many lags, indicating an overall trend. The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons: CO2 concentration peaks at the start of summer, and drops to a low in the fall, before rising again. These observations are consistent with the report from 1997.
+We see strong persistent autocorrelation for many lags, indicating an overall trend. The time series also shows strong evidence of seasonality corresponding closely with the meteorological seasons: the seasonal plot on the right shows that CO2 concentration peaks at the start of summer, and drops to a low in the fall, before rising again. These observations are consistent with the report from 1997.
 
-We now study the time series' stationarity. We conduct the Augmented Dickey-Fuller Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. However, this is *contrasted* by a p-value of 0.01 yielded by the test, which indicates evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
+We now study the time series' stationarity. We conduct the Augmented Dickey-Fuller (ADF) Test to test the null hypothesis that the time series is not stationary. As seen in the time series plot for `co2`, we have a clear upward trend, suggesting non-stationarity. However, this is *contrasted* by a p-value of 0.01 yielded by the test, which indicates sufficient evidence to reject the null hypothesis of non-stationarity. To look at stationarity in variance, we fit a yearly CO2 average on the monthly time series, and inspect the residuals from year to year. Although there are slight changes in the variance, they seem to regress to a constant variance over time. Thus, once we account for the yearly increases in CO2 ppmv, there is likely a constant variance over time.
 
 ```{r seasonality-irregularities-two, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap = "Studying variance over time"}
 
@@ -776,6 +773,8 @@ The new data collection method and techniques yield similar trends in average CO
 
 \newpage
 ## (1 point) Task 2b: Compare linear model forecasts against realized CO2
+
+We now compare the Polynomial (3) with `season` variable's forecasts with the realized CO2 levels.
 
 ```{r comparing-to-forecast, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%", fig.cap = "Forecasted with a Polynomial (3) with Season Variable Model"}
 
@@ -820,11 +819,12 @@ autoplot(new_co2_tsib, value) +  # Plot original data  # Plot original data
 
 
 ```
-When plotting the observed Co2 concentrations to the forecasted values from data up to 1997, we see a clear mismatch in predictions. The model had predicted a declining trend of Co2 concentrations, but actual concentrations increased fairly linearly. The declining trend was modeled with an expected curvilinear relationship with Co2 concentrations over time, as this fit better when looking at the time period between the 1950s and 1990s. But the actual time series may not be appropriately measured as a strict polynomial relationship, possibly depending on external causes such as human-lead efforts to reduce carbon emissions or efforts to restrict policy against reducing carbon emissions.
+We see a clear mismatch in predictions from the plot above. The model had predicted a declining trend of CO2 concentrations, but actual concentrations seemed to increase fairly linearly. The declining trend was modeled with an expected curvilinear relationship with CO2 concentrations over time, as this fit better when looking at the time period between the 1950s and 1990s. However, the assumption of a the trend to taper off as suggested by the Polynomial (3) model is a strong, pssibly unjustified one. Whether human-lead efforts to reduce carbon emissions or efforts to restrict policy against reducing carbon emissions are sufficient to slow the trend requires further study and justification.
 
 ## (1 point) Task 3b: Compare ARIMA models forecasts against realized CO2
 
-```{r comparing-to-arima, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap="Forecasted with a ARIMA Model"}
+We now cmpare the ARIMA 
+```{r comparing-to-arima, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%",fig.cap="Forecasted with a ARIMA(0,1,1)(0,1,1)[12] Model"}
 
 # Generate forecasts from model.bic
 forecast_arima <- model.bic %>%
@@ -840,14 +840,15 @@ autoplot(forecast_arima, color = "blue2") +  # Add forecast first
   
 ```
 
-The ARIMA model, while closer in trend to the observed values than the curvilinear model, still underestimates the increases in global Co2 concentrations. The yearly fluctuations match better than the previous forecast and in the short-term the forecast performs well, but within 5 years the forecast diverges from actual concentrations and by 2020 we see concentrations of ~12.5 Co2 ppmv higher than anticipated. By 2024, the observed values at barely at the tail end of the 95% confidence interval, and look unlikely to stay within the confidence interval should the forecast continue.
+The ARIMA(0,1,1)(0,1,1)[12] model, while closer in trend to the observed values than the curvilinear model, still underestimates the increases in global CO2 concentrations. The yearly fluctuations match better than the previous forecast and in the short-term the forecast performs well, but within 5 years the forecast diverges from actual concentrations and by 2020 we see concentrations of ~12.5 Co2 ppmv higher than anticipated. By 2024, the observed values at barely at the tail end of the 95% confidence interval, and look unlikely to stay within the confidence interval should the forecast continue.
 
 ## (3 points) Task 4b: Evaluate the performance of 1997 linear and ARIMA models
 
-Before, we expected that we would reach 420 ppmv around May of 2031, but the first date we past this threshold was in March of 2022. In other words, our predictions were nearly a decade off courses. This may imply a more concerning trajectory for negative environmental outcomes than previously anticipated.
+Before, we expected that we would reach 420 ppmv around May of 2031, but the first date we past this threshold was in December of 2022. In other words, our predictions were nearly a decade off course. This may imply a more concerning trajectory for negative environmental outcomes than previously anticipated.
 
-We now use the weekly data to generate a month-average series from 1997 to present-day 2024, and compare the overall forecasting performance of both the Polynomial (3) with Season variable model, and the ARIMA model.
+We now use the weekly data to generate a month-average series from 1997 to present-day 2024, and compare the overall forecasting performance of both the Polynomial (3) with `season` variable model, and the ARIMA model.
 
+We do this by first comparing the Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) of each forecasting model, and conduct a significance test to formally compare the differences. We see that the polynomial season model has an MAE of ~ 15.8, while the ARIMA model has lower MAE of ~ 7.3. Similarly, we see that the polynomial season model has a higher RMSE of ~ 19.9, while the ARIMA model has lower RMSE of ~ 8.9. That the ARIMA model has lower errors suggests that it is a better fitting forecasting model. Finally, we conducted the Diebold-Mariano Test, which tests for differences in forecast errors, returns a significant p-value of less than 2.2e-16, allowing us to reject the null hypothesis that the two forecasts have the same forecast accuracy.
 
 ```{r comparing-forecasting-performance, echo = FALSE, fig.align='center', fig.height=3, fig.width=10, out.width="100%"}
 
@@ -893,12 +894,11 @@ errors_arima <- actual_values - arima_forecast_values
 # p-value less than .05, may reject the null hypothesis that the two errors are equal
 
 ```
-We do this by first comparing the Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) of each forecasting model, and conduct a significance test to formally compare the differences. We see that the polynomial season model has an MAE of ~ 15.8, while the ARIMA model has lower MAE of ~ 7.3. Similarly, we see that the polynomial season model has a higher RMSE of ~ 19.9, while the ARIMA model has lower RMSE of ~ 8.9. That the ARIMA model has lower errors suggests that it is a better fitting forecasting model. Finally, the conducted Diebold-Mariano Test, which tests for differences in forecast errors, returns a significant p-value of less than 2.2e-16, allowing us to reject the null hypothesis that the two forecasts have the same forecast accuracy.
 
 
 ## (4 points) Task 5b: Train best models on present data
 
-We now seasonally adjust the weekly data, and split both seasonally-adjusted (SA) and non-seasonally-adjusted (NSA) series into training and test sets, using the last two years (2022-2024) of observations as the test sets. We also use spline interpolation for 18 missing values. We obtain the decomposition in the plots below.
+We now seasonally adjust the weekly data, and split both seasonally-adjusted (SA) and non-seasonally-adjusted (NSA) series into training and test sets, using the last two years (Oct 2022- Sep 2024) of observations as the test sets. We also use spline interpolation for 18 missing values. We obtain the decomposition in the plots below.
 
 ```{r stl-decomposition, echo = FALSE, fig.align='center', fig.height=6, fig.width=10, out.width="100%", fig.cap = "Clear seasonality and trend seen from decomposition", message = FALSE, warning = FALSE}
 new_co2_tsib <- new_co2_tsib %>%
@@ -960,7 +960,7 @@ test_NSA <- new_co2_tsib_impute %>%
   filter(datetime >= test_start_date & datetime <= test_end_date) 
 ```
 
-We now look at the ACFs and PACFs of the SA and NSA training data, with a difference of 1 to account of the overall trend, to consider what ARIMA models we can fit to it. 
+We now look at the ACFs and PACFs of the SA and NSA training data, with a difference of 1 and 52 to account for the overall trend and annual seasonality, to consider what ARIMA models we can fit to it. 
 
 \newpage
 
@@ -993,7 +993,7 @@ train_SA_pacf <- PACF(train_SA, difference(difference(seasonally_adjusted_value,
 
 ```
 
-We note that the NSA ACF shows a sharp tapering off, while the PACF tapers off more slowly. This indicates perhaps a MA model might be more suitable. We also still see spikes at teh 52th lags, indicating we could perhaps add a MA seasonal component, and also difference. We thus expect perhaps something like  ARIMA(0,1,1)(0,1,1); however, we will let the `ARIMA` function choose a model for us. For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will simply let the `ARIMA` function pick the best model. We get the tables below.
+We note that the NSA ACF shows a sharp tapering off, while the PACF tapers off more slowly. This indicates perhaps a MA model might be more suitable. We also still see spikes at the 52th lags, indicating we could perhaps add an AR seasonal component. Still, we will let the `ARIMA` function choose a model for us. For the SA data, since it was already de-trended and we also see a tapering ACF and sharply dropping PACF, we will simply let the `ARIMA` function pick the best model. We get the tables below.
 
 ```{r training models, echo = FALSE, cache = TRUE}
 # NSA
@@ -1034,17 +1034,17 @@ sa.auto.report <- model.bic.present.sa %>%
 # NSA: Create a data frame for NSA models
 nsa_table <- data.frame(
   Model = c("Auto: ARIMA(0,1,3)(2,1,0)[52]"),
-  AICc = c(nsa.auto.report$AICc),
-  BIC = c(nsa.auto.report$BIC),
-  LogLik = c(nsa.auto.report$log_lik)
+  AICc = c(unname(nsa.auto.report$AICc)),
+  BIC = c(unname(nsa.auto.report$BIC)),
+  LogLik = c(unname(nsa.auto.report$log_lik))
 )
 
 # SA: Create a data frame for SA model
 sa_table <- data.frame(
   Model = c("Auto: ARIMA(4,1,1)"),
-  AICc = c(sa.auto.report$AICc),
-  BIC = c(sa.auto.report$BIC),
-  LogLik = c(sa.auto.report$log_lik)
+  AICc = c(unname(sa.auto.report$AICc)),
+  BIC = c(unname(sa.auto.report$BIC)),
+  LogLik = c(unname(sa.auto.report$log_lik))
 )
 
 ```
@@ -1061,6 +1061,8 @@ kable(sa_table, caption = "SA ARIMA Model Results")%>%
 ```
 
 Now we assess the residuals for the NSA model ARIMA(0,1,3)(2,1,0)[52]. We get the following plots.
+
+\newpage
 
 ```{r assessing-residuals-nsa, fig.align='center',fig.height=4.5,fig.width=12,out.width="100%",message = FALSE, echo = FALSE, warning = FALSE,fig.cap = "Evaluating ARIMA model for NSA data"}
 # Extract residuals from the ARIMA model
@@ -1087,7 +1089,7 @@ qq_plot.nsa <- ggplot(data = as.data.frame(residuals_arima.nsa), aes(sample = .r
 residual_plot.nsa|acf_plot.nsa |qq_plot.nsa
 
 ```
-They mostly look like white noise, and the q-q plot is moderately close to a normal distribution. A Ljung Box Test on the residuals yielded a p-value of 0.1173, indicating insufficient evidence to reject the null-hypothesis that there is no auto-correlation. We are good with this model, and now proceed to assess the residuals for the ACF plot. 
+The residuals mostly look like white noise, and the q-q plot is moderately close to a normal distribution. A Ljung Box Test on the residuals yielded a p-value of 0.1173, indicating insufficient evidence to reject the null-hypothesis that there is no auto-correlation. We are good with this model; we also note that it is a different model than that when trained on only data up to 1997. This could hint at inherent changes within the CO2-generating system itself. We now proceed to assess the residuals for the SA data. 
 ```{r ljung box test nsa, echo = FALSE, warning= FALSE}
 # Ljung Box Test on residuals
 resid.ts.nsa <- residuals_arima.nsa %>%
@@ -1139,7 +1141,7 @@ resid.ts.sa <- ts(resid.ts.sa)
 # Perform the Ljung-Box test on the residuals
 #Box.test(resid.ts.sa, lag = 52, type = "Ljung-Box")
 ```
-We can see that the residuals do not look like white noise, and a Ljung-Box test yielded a p-value of < 1.07e-09, indicating sufficient evidence to reject the null-hypothesis that there is no auto-correlation. We tried other models like an ARIMA(0,1,4) from studying the ACF and PACF plots, but it did not improve the results. Nonetheless, we now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models. 
+We can see that the residuals for the SA data do not look like white noise, and a Ljung-Box test yielded a p-value of ~ 1.087e-09, indicating sufficient evidence to reject the null-hypothesis that there is no auto-correlation in the residuals. We tried other models like an ARIMA(0,1,4) from studying the ACF and PACF plots, but it did not improve the results. Nonetheless, we now look at the forecasts of these two models on our test data. We now look at both the fit of our models on the actual data, as well as the forecasts for both models.
 
 \newpage
 
@@ -1200,7 +1202,7 @@ sa_full_plot<-autoplot(sa_fitted,.fitted,color = "blue2") +  # Fitted values for
 (sa_forecast_plot| nsa_forecast_plot)
 
 ```
-We can see that our models' fitted values in blue are extremely close to the actual values plotted in black in the top two plots. For the forecasts, both models 95% confidence intervals in blue included the actual data in black However, the NSA model seemed to provide a closer fit to the actual data. We now compare both the RMSE and MAE of both models.
+We can see that our models' fitted values in blue are extremely close to the actual values plotted in black in the top two plots. For the forecasts, both models 95% confidence intervals in blue included the actual data in black. However, the NSA model seemed to provide a closer fit to the actual data. We now compare both the RMSE and MAE of both models to assess the fits more quantitatively.
 
 ```{r MSE and MAE for final models, echo = FALSE}
 # NSA: Calculate MSE and MAE for training set (fitted values)
@@ -1261,7 +1263,7 @@ kable(model_comparison, caption = "Comparison of NSA and SA Models on Training a
   kable_styling(font_size = 9,latex_options = "HOLD_position") 
 ```
 
-As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set, indicating that the NSA model of ARIMA(0,1,3)(2,1,0) generalizes better. Given that our SA ARIMA model can be improved, we now fit a polynomial time-trend model for the SA series and compare it with the SA ARIMA model.
+As we see from the table above, the SA model outperformed the NSA model on the training set in both RMSE and MAE metrics, but the NSA model outperformed the SA model on the test set, indicating that the NSA model of ARIMA(0,1,3)(2,1,0)[52] generalizes better. Given that our SA ARIMA model can be improved, we now fit a polynomial time-trend model for the SA series and compare it with the SA ARIMA model.
 
 \newpage
 
@@ -1300,7 +1302,7 @@ SA_poly_forecast_plot <- autoplot(train_SA, seasonally_adjusted_value) +  # Plot
 SA_poly_full_plot | SA_poly_forecast_plot
 
 ```
-We can see that Polynomial (3) model seems to fit the overall trend decently, although it does not perform so well on the forecast, with the actual data out of the 95% confidence interval. The Polynomial (3) model also yielded a RMSE and MAE of 0.7558659 and 0.6160157 respectively for the training set, and a RMSE and MAE of 1.611581 and 1.377034 respectively for the test set. Although the ARIMA models outperformed the Polynomial (3) model by far on the training sets, the Polynomial (3) model did better with a lower RMSE and MAE on the test set.
+We can see that Polynomial (3) model seems to fit the overall trend decently, although it does not perform so well on the forecast, with the actual data out of the 95% confidence interval. Interestingly, the Polynomial (3) model  yielded a RMSE and MAE of 0.756 and 0.616 respectively for the training set, and a RMSE and MAE of 1.61 and 1.38 respectively for the test set. This means that although the SA ARIMA model outperformed the Polynomial (3) model on the training sets, the Polynomial (3) model did better with a lower RMSE and MAE on the test set.
 
 ```{r assesing poly three model, echo = FALSE}
 # Calculate RMSE and MAE for poly (3) model
@@ -1335,7 +1337,7 @@ sa__poly_mae_test<- mean(sa_poly_test_errors$ae)
 
 With the non-seasonally adjusted data series, we now generate predictions for when atmospheric CO2 is expected to be at 420 ppm and 500 ppm levels for the first and final times. We also generate a prediction for atmospheric CO2 levels in the year 2122.
 
-```{r future_prediction, echo = FALSE}
+```{r future-prediction, echo = FALSE, cache= TRUE}
 # Generate forecasts for the NSA ARIMA model
 nsa_forecast <- model.bic.present.nsa %>%
   dplyr::select(auto) %>%
@@ -1377,18 +1379,14 @@ ci_upper_500 <- mean_500 + 1.28 * sd_500
 
 ```
 
-```{r match_values}
-# get first and last values
-last_420 <- c(ci_lower_420[length(ci_lower_420)], ci_upper_420[length(ci_upper_420)])
-last_500 <- c(ci_lower_500[length(ci_lower_500)], ci_upper_500[length(ci_upper_500)])
-
-# Filter threshold_420 for the closest .mean values for 420 ppm
+```{r match_values, echo = FALSE}
+# Get first and last dates for 420 ppm
 matching_dates_420 <- data.frame(
   `MonthYear` = c(threshold_420$monthyear[1], threshold_420$monthyear[nrow(threshold_420)]),
   `CO2_Level_ppm` = c(threshold_420$.mean[1], threshold_420$.mean[nrow(threshold_420)])
   )
 
-# Filter threshold_500 for the closest .mean values for 500 ppm
+# Get first and last dates for 500 ppm
 matching_dates_500 <- data.frame(
   `MonthYear` = c(threshold_500$monthyear[1], threshold_500$monthyear[nrow(threshold_500)]),
   `CO2 Level (ppm)` = c(threshold_500$.mean[1], threshold_500$.mean[nrow(threshold_500)])
@@ -1398,30 +1396,37 @@ matching_dates_500 <- data.frame(
 # matching_dates_420
 # matching_dates_500
 
-# Looking at confidence intervals for first and last time 420 and 500 level is reached
-c(ci_lower_420[1],  ci_upper_420[1])
-c(ci_lower_500[1],  ci_upper_500[1])
+# Looking at confidence intervals for first and last time 420 level is reached
+# c(ci_lower_420[1],  ci_upper_420[1])
+# c(ci_lower_420[length(ci_lower_420)], ci_upper_420[length(ci_upper_420)])
+
+# Looking at confidence intervals for first and last time 500 level is reached
+# c(ci_lower_500[1],  ci_upper_500[1])
+# c(ci_lower_500[length(ci_lower_500)], ci_upper_500[length(ci_upper_500)])
+
 
 ```
 
-```{r forecast_420_500, echo = FALSE, message = FALSE}
+```{r forecast-420-500, echo = FALSE, message = FALSE}
 # Create a data frame with blanks
 co2_table <- data.frame(
   `CO2 Level` = c("420 ppm", "500 ppm"),  # CO2 levels to track
   `First Month` = c("2022 Dec", "2056 Feb"),      
-  `First Value` = c("420.0", "500.4"),       
+  `First Value` = c("420.1 (419.3, 421.0)", "500.2 (448.5, 551.9)"),       
   `Last Month` = c("2024 Sep", "2058 Aug"),      
-  `Last Value` = c("420.8", "500.8")      
+  `Last Value` = c("420.8 (419.1, 422.5)", "500.8 (443.3, 558.4)")      
 )
 
 # Print the table using kable
-kable(co2_table, caption = "CO2 Levels and Forecasted Times ARIMA NSA with 80% Confidence Intervals")%>%
-  kable_styling(font_size =9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
+kable(co2_table, caption = "CO2 Levels and Forecasted Times ARIMA NSA with 80\\% Confidence Intervals")%>%
+  kable_styling(font_size =9,latex_options = "HOLD_position")  
 ```
 
-Using the non-seasonally adjusted model, the table above presents projections for when atmospheric CO₂ concentrations are anticipated to reach 420 ppm and 500 ppm levels, both for the first occurrence and the final plateau. This provides insights into the timeline of CO₂ concentration milestones based on current trends, though it does not factor in potential seasonal fluctuations or mitigation efforts.
+Using the non-seasonally adjusted model, the table above presents projections for when atmospheric CO2 concentrations are anticipated to reach 420 ppm and 500 ppm levels, both for the first occurrence and the final plateau. This provides insights into the timeline of CO2 concentration milestones based on current trends, though it does not factor in potential mitigation efforts.
 
-```{r forecast_2122, echo = FALSE, message = FALSE}
+We now forecast for CO2 levels up to the year 2122 in following table, including the standard deviation. However, these projections do not account for current global initiatives aimed at reducing greenhouse gases, such as the transition from gas-powered vehicles to electric vehicles as part of the drive toward net-zero emissions. Given that CO2 levels are heavily influenced by human activities and policy changes, these forecasts are unlikely to be highly accurate over such a long horizon.
+
+```{r forecast-2122, echo = FALSE, message = FALSE}
 # Extract the forecast for the year 2100
 forecast_2122 <- forecast_df %>%
   filter(year(datetime) == 2122)
@@ -1429,15 +1434,14 @@ forecast_2122 <- forecast_df %>%
 # Create variance column
 forecast_2122$std <- sqrt(variance(forecast_2122$value))
 forecast_2122_table<-forecast_2122 %>%
-  dplyr::select("monthyear",".mean","std") %>%
+  dplyr::select("datetime",".mean","std") %>%
   mutate(.mean = round(.mean,1), std = round(std,1)) %>%
   rename(
-    Date =monthyear,
+    Date =datetime,
     Value = .mean,
     SD = std
   )
 # Print forecast for 2122
 kable(forecast_2122_table, caption = "CO2 Forecasts in 2122")%>%
-  kable_styling(font_size = 9,latex_options = "HOLD_position")  # Adjust the font size here (change to any desired value)
+  kable_styling(font_size = 9,latex_options = "HOLD_position")
 ```
-Our model provides forecasts for CO2 levels up to the year 2122, including a standard deviation range. However, these projections do not account for current global initiatives aimed at reducing greenhouse gases, such as the transition from gas-powered vehicles to electric vehicles as part of the drive toward net-zero emissions. Given that CO2 levels are heavily influenced by human activities and policy changes, these forecasts are unlikely to be highly accurate over such a long horizon.
