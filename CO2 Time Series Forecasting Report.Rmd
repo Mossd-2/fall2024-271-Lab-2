@@ -1,5 +1,5 @@
 ---
-title: 'Statistical Methods for Discrete Response, Time Series, and Panel Data (W271): Lab 2'
+title: 'Time Series Modeling of CO2 Emissions: Forecasting Trends with Seasonal ARIMA and Polynomial Regression'
 author: 'Jasmol Dhesi, Jonathan Ho, Diego Moss'
 date: "2024-11-04"
 geometry: margin=1in
